@@ -12,7 +12,7 @@ interface UserState {
 
 export const useUserStore = create<UserState>((set, get) => ({
   profile: null,
-  isLoading: false,
+  isLoading: true,
 
   loadProfile: async () => {
     set({ isLoading: true });

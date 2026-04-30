@@ -16,7 +16,7 @@ export function GameInstructions({ title, description, steps, className }: GameI
           <p className="font-medium text-foreground">{title}</p>
           <p>{description}</p>
           <ol className="list-decimal list-inside space-y-0.5 pl-1">
-            {steps.map((step, index) => (
+            {steps.slice(0, 3).map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>

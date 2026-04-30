@@ -1,50 +1,141 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+================================================================================
+同步影响报告 (Sync Impact Report)
+================================================================================
+版本变更: 无 → 1.0.0 (初始版本)
+修改原则: 无
+新增原则:
+  - I. 中文优先 (Chinese-First)
+  - II. 代码清晰 (Code Clarity)
+  - III. 渐进交付 (Incremental Delivery)
+  - IV. 独立可测 (Independent Testability)
+  - V. 设计驱动 (Design-Driven)
+删除原则: 无
+模板需更新: 无需更新 (constitution 为项目级配置)
+待办事项: 无
+================================================================================
+-->
 
-## Core Principles
+# BrainTrain 项目章程
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+## 核心原则
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### I. 中文优先 (Chinese-First)
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+所有项目文档、代码注释、用户界面文本、提交信息必须使用中文。技术术语和标识符保留英文。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**具体要求**:
+- 文档文件 (spec.md, plan.md, tasks.md 等) 使用中文编写
+- 代码注释使用中文解释逻辑和意图
+- 用户界面中的所有文本使用中文
+- 提交信息 (commit message) 使用中文描述变更
+- TypeScript/JavaScript 标识符、类名、函数名保留英文
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**示例**:
+```typescript
+// 正确：注释使用中文
+// 计算舒尔特表得分
+function calculateSchulteScore(time: number, errors: number): number {
+  // ...
+}
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+// 错误：注释使用英文
+// Calculate Schulte score
+function calculateSchulteScore(time: number, errors: number): number {
+  // ...
+}
+```
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### II. 代码清晰 (Code Clarity)
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+代码应简洁、可读、自解释。避免过度工程化，优先使用直观的实现方式。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**具体要求**:
+- 函数和变量命名应清晰表达其用途
+- 单一职责原则：一个函数只做一件事
+- 避免深层嵌套，使用早期返回简化逻辑
+- 删除未使用的代码，而非仅注释掉
+- 复杂逻辑必须配有中文注释说明
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### III. 渐进交付 (Incremental Delivery)
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+采用迭代式开发，每个用户故事应独立可交付，逐步构建完整功能。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**具体要求**:
+- 按优先级实现用户故事 (P1 → P2 → P3)
+- 每个用户故事完成后应可独立测试和演示
+- 避免大段代码一次性提交，按任务粒度提交
+- 完成 MVP 后再添加高级功能
+
+### IV. 独立可测 (Independent Testability)
+
+每个用户故事必须能独立测试，不依赖其他故事完成。
+
+**具体要求**:
+- 每个用户故事有明确的验收标准
+- 避免故事间的紧密耦合
+- 为每个游戏模式编写独立的测试用例
+- 使用模拟数据测试边界条件
+
+### V. 设计驱动 (Design-Driven)
+
+UI 设计通过 Stitch MCP 生成，确保视觉一致性和专业性。
+
+**具体要求**:
+- 优先生成设计系统和核心页面设计
+- 所有游戏界面遵循统一的设计规范
+- 移动端优先，确保响应式适配
+- 使用高对比度确保可读性
+
+## 技术约束
+
+### 技术栈
+
+- **前端框架**: React 19 + TypeScript 5.x
+- **构建工具**: Vite
+- **样式方案**: Tailwind CSS 4 + shadcn/ui
+- **状态管理**: Zustand
+- **数据存储**: IndexedDB (Dexie.js)
+- **动画效果**: Framer Motion
+- **音频处理**: Howler.js
+
+### 性能目标
+
+- 首屏加载时间 < 2秒
+- 游戏交互帧率 60fps
+- Lighthouse 评分 > 90
+
+### 兼容性要求
+
+- Chrome 90+, Safari 14+, Firefox 88+, Edge 90+
+- 支持 PWA 离线使用
+- 响应式设计适配移动端和 PC 端
+
+## 治理
+
+### 章程优先级
+
+本章程优先于所有其他开发实践。当其他指南与本章程冲突时，以本章程为准。
+
+### 修订程序
+
+1. **提案**: 任何项目成员可提议修订
+2. **审查**: 在 CLAUDE.md 中记录修订理由
+3. **批准**: 经项目维护者批准后生效
+4. **版本更新**: 按语义化版本规则更新版本号
+
+### 版本管理
+
+- **MAJOR**: 核心原则的重大变更或不兼容修改
+- **MINOR**: 新增原则或扩展现有原则
+- **PATCH**: 文字澄清、格式调整、非语义性修改
+
+### 合规检查
+
+- 所有 PR 必须验证是否符合"中文优先"原则
+- 代码审查时检查注释语言
+- 文档审查时检查内容语言
+
+---
+
+**版本**: 1.0.0 | **生效日期**: 2026-03-29 | **最后修订**: 2026-03-29

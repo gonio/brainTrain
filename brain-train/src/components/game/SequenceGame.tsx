@@ -132,7 +132,7 @@ export function SequenceGame({
       {/* 记忆阶段 */}
       {phase === 'memorize' && (
         <div className="relative">
-          <div className="aspect-square bg-surface-container-low dark:bg-[#131b2e] rounded-2xl flex items-center justify-center shadow-inner mb-4">
+          <div className="aspect-square bg-surface-container-low rounded-2xl flex items-center justify-center shadow-inner mb-4">
             <AnimatePresence mode="wait">
               {sequence.slice(0, currentIndex + 1).map((item, index) => (
                 index === currentIndex && (

@@ -7,6 +7,18 @@ export function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
+  // 检查提示是否过期（超过7天）
+  const isPromptExpired = () => {
+    const promptDismissed = localStorage.getItem('pwa-prompt-dismissed');
+    if (!promptDismissed) return true;
+
+    const dismissedTime = parseInt(promptDismissed, 10);
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+
+    return (now - dismissedTime) > sevenDays;
+  };
+
   useEffect(() => {
     // 检查是否已安装
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -23,9 +35,8 @@ export function PWAInstallPrompt() {
       // 显示安装提示
       // 延迟显示，避免页面加载时立即打扰用户
       setTimeout(() => {
-        // 检查用户是否之前关闭过提示
-        const promptDismissed = localStorage.getItem('pwa-prompt-dismissed');
-        if (!promptDismissed) {
+        // 检查用户是否之前关闭过提示，如果超过7天则重新显示
+        if (isPromptExpired()) {
           setShowPrompt(true);
         }
       }, 3000);
@@ -41,6 +52,11 @@ export function PWAInstallPrompt() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
     window.addEventListener('appinstalled', handleAppInstalled);
+
+    // 检查是否过期，如果过期则清除记录
+    if (isPromptExpired()) {
+      localStorage.removeItem('pwa-prompt-dismissed');
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
@@ -89,7 +105,7 @@ export function PWAInstallPrompt() {
           exit={{ opacity: 0, y: 50 }}
           className="fixed bottom-24 left-4 right-4 z-50 max-w-md mx-auto"
         >
-          <div className="bg-surface-container border border-border rounded-2xl shadow-lg p-4 flex items-center gap-4">
+          <div className="bg-surface-container/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl p-4 flex items-center gap-4">
             {/* 应用图标 */}
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-2xl flex-shrink-0">
               🧠

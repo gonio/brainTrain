@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../stores/userStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 
@@ -8,6 +9,7 @@ interface NavBarProps {
 }
 
 export function NavBar({ onStatsClick, onSettingsClick }: NavBarProps) {
+  const navigate = useNavigate();
   const { profile } = useUserStore();
   const { theme, setTheme } = useSettingsStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -70,10 +72,22 @@ export function NavBar({ onStatsClick, onSettingsClick }: NavBarProps) {
               <span className="text-lg">{getThemeIcon()}</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent text-sm">
-              <span>👤</span>
-              <span className="font-medium">{profile?.displayName || '用户'}</span>
-            </div>
+            {/* 用户资料按钮 - 在所有屏幕显示 */}
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors text-sm border border-primary/20"
+            >
+              {profile?.avatar?.startsWith('data:image') ? (
+                <img
+                  src={profile.avatar}
+                  alt="头像"
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-primary">{profile?.avatar || '👤'}</span>
+              )}
+              <span className="font-medium text-primary hidden sm:inline">{profile?.displayName || '用户'}</span>
+            </button>
 
             {/* Mobile menu button */}
             <button

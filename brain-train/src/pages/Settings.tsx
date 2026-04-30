@@ -51,10 +51,10 @@ export function Settings() {
                   key={option.value}
                   onClick={() => setTheme(option.value)}
                   className={cn(
-                    'p-3 rounded-xl text-center transition-all',
+                    'p-3 rounded-xl text-center transition-all border-2',
                     theme === option.value
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                      : 'bg-accent hover:bg-accent/80'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
+                      : 'bg-surface-container border-border hover:bg-surface-container-high'
                   )}
                 >
                   <div className="text-2xl mb-1">{option.icon}</div>
@@ -147,10 +147,10 @@ export function Settings() {
                 key={minutes}
                 onClick={() => setDailyGoalMinutes(minutes)}
                 className={cn(
-                  'p-3 rounded-xl text-center transition-all',
+                  'p-3 rounded-xl text-center transition-all border-2',
                   dailyGoalMinutes === minutes
-                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                    : 'bg-accent hover:bg-accent/80'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
+                    : 'bg-surface-container border-border hover:bg-surface-container-high'
                 )}
               >
                 <div className="text-lg font-bold font-headline">{minutes}</div>

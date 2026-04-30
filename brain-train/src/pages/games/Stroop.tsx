@@ -5,6 +5,7 @@ import { useAudio } from '../../hooks/useAudio';
 import { StroopGame } from '../../components/game/StroopGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameInstructions } from '../../components/game/GameInstructions';
+import { GameControlBar } from '../../components/game/GameControlBar';
 import { stroopInstructions } from '../../lib/gameplayInstructions';
 import type { TrainingDetails, StroopQuestion } from '../../types';
 
@@ -104,24 +105,30 @@ export function Stroop() {
   }, [currentQuestion, questions, endGame, soundEnabled, playEffect]);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-4 pb-24">
-      {/* Header */}
-      <div className="mb-6 self-start">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 font-headline">
-          Color Clash
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          忽略文字含义，快速识别文字的颜色。训练你的抑制控制能力。
-        </p>
-      </div>
+    <>
+      <GameControlBar title="字色干扰" showTimer={isPlaying} elapsedTime={Math.floor(elapsedTime)} />
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* Header */}
+        {!isPlaying && !showResult && (
+          <div className="mb-3 self-start">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
+              字色干扰
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              忽略文字含义，快速识别文字的颜色。
+            </p>
+          </div>
+        )}
 
-      {/* 玩法说明 */}
-      <GameInstructions
-        title={stroopInstructions.title}
-        description={stroopInstructions.objective}
-        steps={stroopInstructions.howToPlay}
-        className="mb-4"
-      />
+        {/* 玩法说明 */}
+        {!isPlaying && !showResult && (
+          <GameInstructions
+            title={stroopInstructions.title}
+            description={stroopInstructions.objective}
+            steps={stroopInstructions.howToPlay}
+            className="mb-3"
+          />
+        )}
 
       {/* 游戏统计 */}
       {isPlaying && (
@@ -142,7 +149,7 @@ export function Stroop() {
       )}
 
       {/* 游戏区域 */}
-      <div className="mb-8">
+      <div className="flex-1 flex flex-col justify-start py-2 mb-4">
         <StroopGame
           isActive={isPlaying}
           onAnswer={handleAnswer}
@@ -211,7 +218,7 @@ export function Stroop() {
 
       {/* 结果展示 */}
       {showResult && (
-        <div className="mt-8 p-6 bg-surface-container-low dark:bg-[#131b2e] rounded-2xl border border-border">
+        <div className="mt-8 p-6 bg-surface-container-low rounded-2xl border border-border">
           <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
           <ScoreBoard
             score={finalScore}
@@ -259,5 +266,6 @@ export function Stroop() {
         </div>
       )}
     </div>
-  );
+  </>
+);
 }

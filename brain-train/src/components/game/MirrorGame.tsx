@@ -211,11 +211,9 @@ export function MirrorGame({
     pathRef.current = [];
     setHasDrawn(false);
 
-    // 重新绘制目标形状
-    if (leftCanvas) {
-      drawTargetShape(leftCanvas, targetShape);
-    }
-  }, [targetShape]);
+    // 重新初始化画布设置并绘制目标形状
+    initCanvas();
+  }, [initCanvas]);
 
   // 提交结果
   const submitResult = useCallback(() => {

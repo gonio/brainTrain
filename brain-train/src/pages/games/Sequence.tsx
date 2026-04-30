@@ -6,6 +6,7 @@ import { useAudio } from '../../hooks/useAudio';
 import { SequenceGame } from '../../components/game/SequenceGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameInstructions } from '../../components/game/GameInstructions';
+import { GameControlBar } from '../../components/game/GameControlBar';
 import { sequenceInstructions } from '../../lib/gameplayInstructions';
 import type { TrainingDetails } from '../../types';
 
@@ -107,30 +108,36 @@ export function Sequence() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-4 pb-24">
-      {/* Header */}
-      <div className="mb-6 self-start">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 font-headline">
-          Sequence Memory
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          记住物品出现的顺序，然后按照相同顺序点击它们。训练你的工作记忆。
-        </p>
-      </div>
+    <>
+      <GameControlBar title="序列记忆" showTimer={isPlaying} elapsedTime={0} />
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* Header */}
+        {!isPlaying && !showResult && (
+          <div className="mb-3 self-start">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
+              序列记忆
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              记住物品出现的顺序，然后按照相同顺序点击它们。
+            </p>
+          </div>
+        )}
 
-      {/* 玩法说明 */}
-      <GameInstructions
-        title={sequenceInstructions.title}
-        description={sequenceInstructions.objective}
-        steps={sequenceInstructions.howToPlay}
-        className="mb-4"
-      />
+        {/* 玩法说明 */}
+        {!isPlaying && !showResult && (
+          <GameInstructions
+            title={sequenceInstructions.title}
+            description={sequenceInstructions.objective}
+            steps={sequenceInstructions.howToPlay}
+            className="mb-3"
+          />
+        )}
 
       {/* 难度选择 */}
       {!isPlaying && !showResult && <DifficultySelector />}
 
       {/* 游戏区域 */}
-      <div className="mb-8">
+      <div className="flex-1 flex flex-col justify-start py-2 mb-4">
         <SequenceGame
           sequenceLength={config.sequenceLength}
           onComplete={handleComplete}
@@ -168,7 +175,7 @@ export function Sequence() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 p-6 bg-surface-container-low dark:bg-[#131b2e] rounded-2xl border border-border"
+          className="mt-8 p-6 bg-surface-container-low rounded-2xl border border-border"
         >
           <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
           <ScoreBoard
@@ -242,5 +249,6 @@ export function Sequence() {
         </motion.div>
       )}
     </div>
-  );
+  </>
+);
 }

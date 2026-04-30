@@ -25,6 +25,7 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   displayName: string;
+  avatar?: string; // base64 或 emoji 头像
   totalTrainingTime: number;
   totalSessions: number;
   currentStreak: number;

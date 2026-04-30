@@ -6,6 +6,7 @@ import { useAudio } from '../../hooks/useAudio';
 import { StoryGame } from '../../components/game/StoryGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameInstructions } from '../../components/game/GameInstructions';
+import { GameControlBar } from '../../components/game/GameControlBar';
 import { storyInstructions } from '../../lib/gameplayInstructions';
 import type { TrainingDetails } from '../../types';
 
@@ -77,27 +78,33 @@ export function Story() {
   }, [endGame, soundEnabled, playEffect]);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-4 pb-24">
-      {/* Header */}
-      <div className="mb-6 self-start">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 font-headline">
-          Scenario Association
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          记住场景中的物品，然后尝试回忆并编一个包含这些物品的故事。训练联想记忆。
-        </p>
-      </div>
+    <>
+      <GameControlBar title="情景联想" showTimer={isPlaying} elapsedTime={0} />
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* Header */}
+        {!isPlaying && !showResult && (
+          <>
+            <div className="mb-3 self-start">
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
+                情景联想
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                记住场景中的物品，然后尝试回忆并编一个包含这些物品的故事。
+              </p>
+            </div>
 
-      {/* 玩法说明 */}
-      <GameInstructions
-        title={storyInstructions.title}
-        description={storyInstructions.objective}
-        steps={storyInstructions.howToPlay}
-        className="mb-4"
-      />
+            {/* 玩法说明 */}
+            <GameInstructions
+              title={storyInstructions.title}
+              description={storyInstructions.objective}
+              steps={storyInstructions.howToPlay}
+              className="mb-3"
+            />
+          </>
+        )}
 
       {/* 游戏区域 */}
-      <div className="mb-8">
+      <div className="flex-1 flex flex-col justify-start py-2 mb-4">
         <StoryGame
           isActive={isPlaying}
           onComplete={handleComplete}
@@ -134,7 +141,7 @@ export function Story() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 p-6 bg-surface-container-low dark:bg-[#131b2e] rounded-2xl border border-border"
+          className="mt-8 p-6 bg-surface-container-low rounded-2xl border border-border"
         >
           <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
           <ScoreBoard
@@ -177,5 +184,6 @@ export function Story() {
         </motion.div>
       )}
     </div>
-  );
+  </>
+);
 }

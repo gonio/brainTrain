@@ -6,6 +6,7 @@ import { useAudio } from '../../hooks/useAudio';
 import { ClassifyGame } from '../../components/game/ClassifyGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameInstructions } from '../../components/game/GameInstructions';
+import { GameControlBar } from '../../components/game/GameControlBar';
 import { classifyInstructions } from '../../lib/gameplayInstructions';
 import type { TrainingDetails } from '../../types';
 
@@ -71,27 +72,33 @@ export function Classify() {
   }, [endGame, soundEnabled, playEffect]);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-4 pb-24">
-      {/* Header */}
-      <div className="mb-6 self-start">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 font-headline">
-          Categorization Logic
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          根据当前规则对物品进行分类。规则会随机切换，保持专注！训练认知灵活性。
-        </p>
-      </div>
+    <>
+      <GameControlBar title="分类逻辑" showTimer={isPlaying} elapsedTime={0} />
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* Header */}
+        {!isPlaying && !showResult && (
+          <div className="mb-3 self-start">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
+              分类逻辑
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              根据当前规则对物品进行分类。规则会随机切换，保持专注！
+            </p>
+          </div>
+        )}
 
-      {/* 玩法说明 */}
-      <GameInstructions
-        title={classifyInstructions.title}
-        description={classifyInstructions.objective}
-        steps={classifyInstructions.howToPlay}
-        className="mb-4"
-      />
+        {/* 玩法说明 */}
+        {!isPlaying && !showResult && (
+          <GameInstructions
+            title={classifyInstructions.title}
+            description={classifyInstructions.objective}
+            steps={classifyInstructions.howToPlay}
+            className="mb-3"
+          />
+        )}
 
       {/* 游戏区域 */}
-      <div className="mb-8">
+      <div className="flex-1 flex flex-col justify-start py-2 mb-4">
         <ClassifyGame
           isActive={isPlaying}
           onComplete={handleComplete}
@@ -128,7 +135,7 @@ export function Classify() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 p-6 bg-surface-container-low dark:bg-[#131b2e] rounded-2xl border border-border"
+          className="mt-8 p-6 bg-surface-container-low rounded-2xl border border-border"
         >
           <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
           <ScoreBoard
@@ -173,5 +180,6 @@ export function Classify() {
         </motion.div>
       )}
     </div>
-  );
+  </>
+);
 }

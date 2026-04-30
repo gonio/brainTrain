@@ -45,21 +45,32 @@ const onboardingSteps = [
 export function Onboarding() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const { profile, updateProfile } = useUserStore();
+  const { profile, isLoading, updateProfile } = useUserStore();
 
-  // 检查是否是新用户
+  // 检查是否是新用户 - 等待 profile 加载完成后再判断
   useEffect(() => {
+    // 如果还在加载中，等待
+    if (isLoading) {
+      return;
+    }
+
+    // 先检查 localStorage（快速路径）
     const hasCompletedOnboarding = localStorage.getItem('onboarding-completed');
+    if (hasCompletedOnboarding) {
+      return;
+    }
+
+    // profile 加载完成后检查
     const hasSeenOnboarding = profile?.preferences?.hasSeenOnboarding;
 
-    if (!hasCompletedOnboarding && !hasSeenOnboarding) {
+    if (!hasSeenOnboarding) {
       // 延迟显示，让用户先看到首页
       const timer = setTimeout(() => {
         setIsOpen(true);
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [profile]);
+  }, [profile, isLoading]);
 
   const handleNext = () => {
     if (currentStep < onboardingSteps.length - 1) {
@@ -106,7 +117,7 @@ export function Onboarding() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-6"
+        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleSkip();
         }}
@@ -116,7 +127,7 @@ export function Onboarding() {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="w-full max-w-sm bg-surface-container rounded-3xl overflow-hidden shadow-2xl"
+          className="w-full max-w-sm bg-surface-container/95 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-border/50"
         >
           {/* 进度条 */}
           <div className="h-1 bg-accent">
@@ -270,7 +281,7 @@ export function Spotlight({
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="absolute bottom-24 left-4 right-4 max-w-sm mx-auto bg-surface-container rounded-2xl p-6 shadow-2xl pointer-events-auto"
+        className="absolute bottom-24 left-4 right-4 max-w-sm mx-auto bg-surface-container/95 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-2xl pointer-events-auto"
       >
         <h3 className="font-bold text-lg mb-2">{title}</h3>
         <p className="text-muted-foreground text-sm mb-4">{description}</p>

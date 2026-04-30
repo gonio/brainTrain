@@ -93,7 +93,7 @@ export function StroopGame({
 
       {/* 颜色词显示区域 */}
       <div className="relative mb-8">
-        <div className="aspect-video bg-surface-container-low dark:bg-[#131b2e] rounded-2xl flex items-center justify-center shadow-inner">
+        <div className="aspect-video bg-surface-container-low rounded-2xl flex items-center justify-center shadow-inner">
           <span
             className="text-6xl font-black font-headline tracking-wider"
             style={{ color: current.wordColorValue }}

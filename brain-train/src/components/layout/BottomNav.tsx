@@ -16,7 +16,7 @@ export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 bg-surface/85 dark:bg-slate-900/85 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 transition-all">
+    <nav className="fixed bottom-0 left-0 w-full z-50 bg-background/95 backdrop-blur-xl border-t border-border transition-all">
       <div className="max-w-md mx-auto flex justify-around items-center px-4 pb-6 pt-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -27,7 +27,7 @@ export function BottomNav() {
               className={`
                 flex flex-col items-center justify-center px-4 py-2 rounded-2xl transition-all duration-300
                 ${isActive
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-primary scale-110'
+                  ? 'bg-accent text-primary scale-110'
                   : 'text-muted-foreground hover:text-primary'
                 }
               `}
@@ -36,7 +36,7 @@ export function BottomNav() {
                 {item.icon}
               </span>
               <span className="font-headline text-[10px] uppercase tracking-widest font-bold mt-1">
-                {item.label}
+                {item.labelZh}
               </span>
             </Link>
           );
@@ -70,14 +70,18 @@ export function TopBar() {
   const isGoalCompleted = todayMinutes >= dailyGoalMinutes;
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full bg-background/85 backdrop-blur-xl border-b border-border">
       <div className="max-w-md mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
-          {/* 左侧：用户头像和进度 */}
-          <div className="flex items-center gap-3">
+          {/* 左侧：用户头像和进度 - 可点击跳转个人资料 */}
+          <Link to="/profile" className="flex items-center gap-3 group">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
-                <span className="material-symbols-outlined text-primary">person</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
+                {profile?.avatar?.startsWith('data:image') ? (
+                  <img src={profile.avatar} alt="头像" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <span className="text-lg">{profile?.avatar || '👤'}</span>
+                )}
               </div>
               {/* 连续训练徽章 */}
               {streak > 0 && (
@@ -89,7 +93,7 @@ export function TopBar() {
             </div>
             <div className="flex flex-col gap-1">
               <span className="font-headline font-bold text-xl tracking-tight text-primary">
-                BrainTrain
+                {profile?.displayName || '用户'}
               </span>
               {/* 每日目标进度条 */}
               <div className="flex items-center gap-2">
@@ -116,12 +120,12 @@ export function TopBar() {
                 )}
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* 右侧：快捷操作 */}
           <Link
             to="/stats"
-            className="p-2 rounded-full hover:bg-slate-200/50 transition-colors active:scale-95"
+            className="p-2 rounded-full hover:bg-accent transition-colors active:scale-95"
           >
             <span className="material-symbols-outlined text-primary">analytics</span>
           </Link>

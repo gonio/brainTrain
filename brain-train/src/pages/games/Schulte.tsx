@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAudio } from '../../hooks/useAudio';
 import { SchulteGrid } from '../../components/game/SchulteGrid';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
-import { Timer } from '../../components/game/Timer';
+import { GameControlBar } from '../../components/game/GameControlBar';
 import type { TrainingDetails } from '../../types';
 
 // 固定5x5配置
@@ -60,6 +61,7 @@ export function Schulte() {
     }
   }, [soundEnabled, playEffect]);
 
+  // 此函数由 SchulteGrid 组件在游戏完成时调用
   const handleComplete = useCallback(() => {
     const endTime = Date.now();
     const totalTime = (endTime - gameStartTime) / 1000;
@@ -95,106 +97,107 @@ export function Schulte() {
   }, [gameStartTime, errors, clickSequence, endGame, soundEnabled, playEffect]);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-4 pb-24">
-      {/* Header - Focus Point Style */}
-      <div className="mb-8 self-start">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 font-headline">
-          Focus Point
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          Find numbers 1-25 in sequential order while keeping your eyes fixed on the center.
-        </p>
-      </div>
+    <>
+      {/* 游戏控制栏 - 游戏进行中显示 */}
+      <GameControlBar
+        title="舒尔特表"
+        showTimer={isPlaying}
+        elapsedTime={Math.floor(elapsedTime)}
+      />
 
-      {/* Game Stats */}
-      {isPlaying && (
-        <div className="mb-6 flex justify-between items-center">
-          <Timer seconds={elapsedTime} isRunning size="md" />
-          <div className="text-sm text-muted-foreground">
-            Time: <span className="font-bold text-foreground">{elapsedTime.toFixed(1)}s</span>
-          </div>
-        </div>
-      )}
-
-      {/* Game Grid */}
-      <div className="mb-8">
-        <SchulteGrid
-          order={GRID_ORDER}
-          onCorrectClick={handleCorrectClick}
-          onWrongClick={handleWrongClick}
-          isActive={isPlaying}
-          startTime={gameStartTime}
-        />
-      </div>
-
-      {/* Metrics - Target, Accuracy, Avg Speed */}
-      {isPlaying && (
-        <div className="mb-8 flex justify-center gap-12">
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">Target</span>
-            <span className="text-secondary text-2xl font-bold font-headline">
-              {String(clickSequence.length + 1).padStart(2, '0')}
-            </span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">Accuracy</span>
-            <span className="text-foreground text-2xl font-bold font-headline">
-              {clickSequence.length > 0
-                ? Math.round((clickSequence.length / (clickSequence.length + errors)) * 100)
-                : 100}%
-            </span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">Errors</span>
-            <span className="text-foreground text-2xl font-bold font-headline">{errors}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Controls */}
-      <div className="flex justify-center gap-4">
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* 未开始游戏时显示标题 */}
         {!isPlaying && !showResult && (
-          <button
-            onClick={handleStart}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all active:scale-95 shadow-lg"
-          >
-            Start Training
-          </button>
+          <div className="mb-4 self-start">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
+              舒尔特表
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              按顺序点击数字1-25，训练视觉搜索能力。
+            </p>
+          </div>
         )}
 
+        {/* Game Grid - 占据剩余空间 */}
+        <div className="flex-1 flex flex-col justify-start py-4">
+          <SchulteGrid
+            order={GRID_ORDER}
+            onCorrectClick={handleCorrectClick}
+            onWrongClick={handleWrongClick}
+            onComplete={handleComplete}
+            isActive={isPlaying}
+            startTime={gameStartTime}
+          />
+        </div>
+
+        {/* Metrics - Target, Accuracy, Avg Speed */}
         {isPlaying && (
-          <button
-            onClick={handleComplete}
-            className="px-6 py-2 border border-border rounded-xl hover:bg-accent transition-all active:scale-95"
-          >
-            End Session
-          </button>
+          <div className="mb-8 flex justify-center gap-12">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">目标</span>
+              <span className="text-secondary text-2xl font-bold font-headline">
+                {String(clickSequence.length + 1).padStart(2, '0')}
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">准确率</span>
+              <span className="text-foreground text-2xl font-bold font-headline">
+                {clickSequence.length > 0
+                  ? Math.round((clickSequence.length / (clickSequence.length + errors)) * 100)
+                  : 100}%
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">错误</span>
+              <span className="text-foreground text-2xl font-bold font-headline">{errors}</span>
+            </div>
+          </div>
         )}
 
+        {/* Controls */}
+        <div className="flex justify-center gap-4">
+          {!isPlaying && !showResult && (
+            <motion.button
+              onClick={handleStart}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
+            >
+              开始训练
+            </motion.button>
+          )}
+
+          {showResult && (
+            <motion.button
+              onClick={handleStart}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
+            >
+              再玩一次
+            </motion.button>
+          )}
+        </div>
+
+        {/* Result Modal */}
         {showResult && (
-          <button
-            onClick={handleStart}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all active:scale-95 shadow-lg"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 p-6 bg-surface-container-low rounded-2xl border border-border"
           >
-            Play Again
-          </button>
+            <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
+            <ScoreBoard
+              score={finalScore}
+              accuracy={Math.round(((GRID_SIZE * GRID_SIZE - errors) / (GRID_SIZE * GRID_SIZE)) * 100)}
+            />
+            <div className="mt-4 text-center text-sm text-muted-foreground space-y-1">
+              <p>用时: {elapsedTime.toFixed(2)}秒</p>
+              <p>错误: {errors}</p>
+            </div>
+          </motion.div>
         )}
       </div>
-
-      {/* Result Modal */}
-      {showResult && (
-        <div className="mt-8 p-6 bg-surface-container-low dark:bg-[#131b2e] rounded-2xl border border-border">
-          <h3 className="text-lg font-semibold mb-4 text-center font-headline">Training Complete!</h3>
-          <ScoreBoard
-            score={finalScore}
-            accuracy={Math.round(((GRID_SIZE * GRID_SIZE - errors) / (GRID_SIZE * GRID_SIZE)) * 100)}
-          />
-          <div className="mt-4 text-center text-sm text-muted-foreground space-y-1">
-            <p>Time: {elapsedTime.toFixed(2)}s</p>
-            <p>Errors: {errors}</p>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

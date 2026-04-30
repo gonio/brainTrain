@@ -17,7 +17,7 @@
   --color-warning-foreground: #ffffff;
   --color-surface: #ffffff;
   --color-muted: #F1F5F9;
-  --color-muted-foreground: #64748B;
+  --color-muted-foreground: #475569;
   --color-accent: #E0E7FF;
   --color-accent-foreground: #3730A3;
   --color-destructive: #ef4444;
@@ -75,6 +75,7 @@
     min-height: 100dvh;
   }
 
+  /* Dark mode - 完整的颜色变量映射 */
   html.dark body {
     background-color: var(--color-background-dark);
     color: var(--color-foreground-dark);
@@ -82,6 +83,30 @@
 
   html.dark * {
     border-color: var(--color-border-dark);
+  }
+
+  /* 深色主题下的颜色类映射 */
+  html.dark {
+    --color-background: var(--color-background-dark);
+    --color-foreground: var(--color-foreground-dark);
+    --color-primary: var(--color-primary-dark);
+    --color-primary-foreground: var(--color-primary-foreground-dark);
+    --color-secondary: var(--color-secondary-dark);
+    --color-secondary-foreground: var(--color-secondary-foreground-dark);
+    --color-success: #34d399;
+    --color-success-foreground: #064e3b;
+    --color-warning: #fbbf24;
+    --color-warning-foreground: #78350f;
+    --color-surface: var(--color-surface-dark);
+    --color-muted: var(--color-muted-dark);
+    --color-muted-foreground: var(--color-muted-foreground-dark);
+    --color-accent: var(--color-accent-dark);
+    --color-accent-foreground: var(--color-accent-foreground-dark);
+    --color-destructive: #f87171;
+    --color-destructive-foreground: #450a0a;
+    --color-border: var(--color-border-dark);
+    --color-input: var(--color-input-dark);
+    --color-ring: var(--color-ring-dark);
   }
 }
 

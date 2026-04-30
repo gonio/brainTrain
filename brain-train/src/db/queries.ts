@@ -6,6 +6,7 @@ const defaultUserProfile: UserProfile = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   displayName: '用户',
+  avatar: '👤', // 默认头像
   totalTrainingTime: 0,
   totalSessions: 0,
   currentStreak: 0,

@@ -6,6 +6,7 @@ import { useAudio } from '../../hooks/useAudio';
 import { AuditoryGame } from '../../components/game/AuditoryGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameInstructions } from '../../components/game/GameInstructions';
+import { GameControlBar } from '../../components/game/GameControlBar';
 import { auditoryInstructions } from '../../lib/gameplayInstructions';
 import type { TrainingDetails } from '../../types';
 
@@ -25,6 +26,7 @@ export function Auditory() {
   } | null>(null);
 
   const isPlaying = status === 'playing';
+  const isPaused = status === 'paused';
 
   const handleStart = useCallback(() => {
     if (!soundEnabled) {
@@ -123,28 +125,34 @@ export function Auditory() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-6 pt-4 pb-24">
-      {/* Header */}
-      <div className="mb-6 self-start">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2 font-headline">
-          Auditory Focus
-        </h1>
-        <p className="text-muted-foreground text-sm font-medium tracking-wide">
-          仔细听播放的数字序列，然后在干扰中准确地重复它们。训练你的听觉选择性注意。
-        </p>
-      </div>
+    <>
+      <GameControlBar title="听觉注意" showTimer={isPlaying} elapsedTime={0} />
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* Header */}
+        {!isPlaying && !showResult && (
+          <div className="mb-3 self-start">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
+              听觉注意
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              仔细听播放的数字序列，然后在干扰中准确地重复它们。
+            </p>
+          </div>
+        )}
 
-      {/* 玩法说明 */}
-      <GameInstructions
-        title={auditoryInstructions.title}
-        description={auditoryInstructions.objective}
-        steps={auditoryInstructions.howToPlay}
-        className="mb-4"
-      />
+        {/* 玩法说明 */}
+        {!isPlaying && !showResult && (
+          <GameInstructions
+            title={auditoryInstructions.title}
+            description={auditoryInstructions.objective}
+            steps={auditoryInstructions.howToPlay}
+            className="mb-3"
+          />
+        )}
 
       {/* 声音提示 */}
       {!soundEnabled && (
-        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-center">
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-center">
           <p className="text-sm text-yellow-600">
             ⚠️ 请在设置中开启声音以进行此训练
           </p>
@@ -155,11 +163,12 @@ export function Auditory() {
       {!isPlaying && !showResult && <DifficultySelector />}
 
       {/* 游戏区域 */}
-      <div className="mb-8">
+      <div className="flex-1 flex flex-col justify-start py-2 mb-4">
         <AuditoryGame
           difficulty={difficulty}
           withNoise={withNoise}
           isActive={isPlaying}
+          isPaused={isPaused}
           onComplete={handleComplete}
         />
       </div>
@@ -201,7 +210,7 @@ export function Auditory() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 p-6 bg-surface-container-low dark:bg-[#131b2e] rounded-2xl border border-border"
+          className="mt-8 p-6 bg-surface-container-low rounded-2xl border border-border"
         >
           <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
           <ScoreBoard
@@ -277,5 +286,6 @@ export function Auditory() {
         </motion.div>
       )}
     </div>
-  );
+  </>
+);
 }

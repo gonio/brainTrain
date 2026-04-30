@@ -10,6 +10,7 @@ interface AuditoryGameProps {
   difficulty: Difficulty;
   withNoise: boolean;
   isActive: boolean;
+  isPaused?: boolean;
   onComplete: (result: {
     sequence: number[];
     userSequence: number[];
@@ -21,6 +22,7 @@ export function AuditoryGame({
   difficulty,
   withNoise,
   isActive,
+  isPaused = false,
   onComplete
 }: AuditoryGameProps) {
   const [sequence, setSequence] = useState<number[]>([]);
@@ -30,8 +32,10 @@ export function AuditoryGame({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [replayCount, setReplayCount] = useState(2); // 允许重播次数
 
-  const { speak } = useAudio();
+  const { speak, stopSpeaking } = useAudio();
   const noiseRef = useRef<{ stop: () => void } | null>(null);
+  const pauseIndexRef = useRef<number>(0); // 记录暂停时的索引
+  const isPausedRef = useRef<boolean>(false); // 暂停状态引用
 
   // 根据难度生成序列长度
   const sequenceLength = {
@@ -89,22 +93,33 @@ export function AuditoryGame({
   }, []);
 
   // 播放序列
-  const playSequence = useCallback(async (seq: number[]) => {
+  const playSequence = useCallback(async (seq: number[], startFrom: number = 0) => {
     setIsSpeaking(true);
+    isPausedRef.current = false;
 
     if (withNoise) {
       startNoise();
     }
 
-    for (let i = 0; i < seq.length; i++) {
+    for (let i = startFrom; i < seq.length; i++) {
+      // 检查是否暂停
+      if (isPausedRef.current) {
+        pauseIndexRef.current = i;
+        return;
+      }
+
       setCurrentIndex(i);
       speak(seq[i].toString());
       await new Promise(resolve => setTimeout(resolve, 800));
     }
 
-    setIsSpeaking(false);
-    stopNoise();
-    setPhase('input');
+    // 只有在没有暂停的情况下才完成
+    if (!isPausedRef.current) {
+      setIsSpeaking(false);
+      stopNoise();
+      setPhase('input');
+      pauseIndexRef.current = 0;
+    }
   }, [speak, withNoise, startNoise, stopNoise]);
 
   // 开始游戏
@@ -115,6 +130,10 @@ export function AuditoryGame({
       setPhase('playing');
       setReplayCount(2);
       stopNoise();
+      // 退出时停止语音播报并重置
+      stopSpeaking();
+      pauseIndexRef.current = 0;
+      isPausedRef.current = false;
       return;
     }
 
@@ -126,7 +145,23 @@ export function AuditoryGame({
     return () => {
       stopNoise();
     };
-  }, [isActive, generateSequence, playSequence, stopNoise]);
+  }, [isActive, generateSequence, playSequence, stopNoise, stopSpeaking]);
+
+  // 处理暂停/恢复
+  useEffect(() => {
+    if (!isActive) return;
+
+    if (isPaused) {
+      // 暂停时设置标志并停止语音
+      isPausedRef.current = true;
+      stopSpeaking();
+      stopNoise();
+    } else if (isPausedRef.current && phase === 'playing') {
+      // 恢复时从暂停位置继续播放
+      isPausedRef.current = false;
+      playSequence(sequence, pauseIndexRef.current);
+    }
+  }, [isPaused, isActive, phase, sequence, playSequence, stopSpeaking, stopNoise]);
 
   // 重播
   const handleReplay = useCallback(() => {
