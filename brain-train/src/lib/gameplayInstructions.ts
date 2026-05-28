@@ -1,5 +1,5 @@
 // 玩法说明配置类型
-type TrainingMode = 'schulte' | 'stroop' | 'sequence' | 'auditory' | 'mirror' | 'classify' | 'story';
+type TrainingMode = 'schulte' | 'stroop' | 'sequence' | 'auditory' | 'classify' | 'story';
 
 export interface GameplayInstructionsConfig {
   mode: TrainingMode;
@@ -103,27 +103,6 @@ export const auditoryInstructions: GameplayInstructionsConfig = {
     '固定7位数字序列。可选择开启背景白噪音增加难度，获得额外分数奖励。',
 };
 
-// 镜像协调玩法说明
-export const mirrorInstructions: GameplayInstructionsConfig = {
-  mode: 'mirror',
-  title: '镜像协调',
-  description: '双侧肢体协调 - 提升双侧肢体协调性和空间感知能力',
-  objective: '双手同步绘制镜像图形，通过运动皮层与小脑的协同训练提高肢体协调性。',
-  howToPlay: [
-    '屏幕分为左右两个画布区域',
-    '左侧显示目标形状（三角形）',
-    '在左侧画布上沿虚线描绘目标形状',
-    '右侧画布实时显示用户的镜像绘制轨迹',
-    '绘制时间限制30秒，完成后提交',
-  ],
-  scoringRules: [
-    '对称性分数（60%权重）：左右轨迹的匹配度',
-    '完整性分数（40%权重）：对目标形状的覆盖程度',
-    '总分 = 对称性得分 × 0.6 + 完整性得分 × 0.4',
-  ],
-  hardModeNote: '固定三角形目标，限时30秒。需要双手协调控制，无操作提示。',
-};
-
 // 分类逻辑玩法说明
 export const classifyInstructions: GameplayInstructionsConfig = {
   mode: 'classify',
@@ -178,7 +157,6 @@ export const gameplayInstructionsMap: Record<string, GameplayInstructionsConfig>
     stroop: stroopInstructions,
     sequence: sequenceInstructions,
     auditory: auditoryInstructions,
-    mirror: mirrorInstructions,
     classify: classifyInstructions,
     story: storyInstructions,
   };

@@ -14,7 +14,7 @@ export function calculateOverallStats(records: TrainingRecord[]) {
 }
 
 export function calculateModeStats(records: TrainingRecord[]): Record<TrainingMode, ModeStatistics> {
-  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'mirror', 'classify', 'story'];
+  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'classify', 'story'];
   const result = {} as Record<TrainingMode, ModeStatistics>;
 
   for (const mode of modes) {

@@ -45,7 +45,7 @@ export function useRecentRecords(records: TrainingRecord[], count: number = 10):
 
 export function useBestScores(records: TrainingRecord[]): Record<TrainingMode, number> {
   return useMemo(() => {
-    const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'mirror', 'classify', 'story'];
+    const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'classify', 'story'];
     const result = {} as Record<TrainingMode, number>;
 
     for (const mode of modes) {

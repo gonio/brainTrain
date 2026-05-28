@@ -30,10 +30,8 @@ export function GameControlBar({ title, showTimer = false, elapsedTime = 0 }: Ga
 
   useEffect(() => {
     if (blocker.state === 'blocked') {
-      // 当导航被阻止时，显示暂停菜单
       pauseGame();
       setShowPauseMenu(true);
-      // 重置 blocker，不执行导航
       blocker.reset();
     }
   }, [blocker, pauseGame]);
@@ -50,7 +48,6 @@ export function GameControlBar({ title, showTimer = false, elapsedTime = 0 }: Ga
 
   const handleExit = () => {
     setShowPauseMenu(false);
-    // 直接退出，不需要二次确认
     abandonGame();
     navigate('/');
   };

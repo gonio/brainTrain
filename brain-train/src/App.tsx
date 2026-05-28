@@ -1,6 +1,6 @@
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { createBrowserRouter, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useUserStore } from './stores/userStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { AppLayout } from './components/layout';
@@ -13,11 +13,9 @@ import { Schulte } from './pages/games/Schulte';
 import { Stroop } from './pages/games/Stroop';
 import { Sequence } from './pages/games/Sequence';
 import { Auditory } from './pages/games/Auditory';
-import { Mirror } from './pages/games/Mirror';
 import { Classify } from './pages/games/Classify';
 import { Story } from './pages/games/Story';
 import { ErrorBoundary } from './components/error-boundary/ErrorBoundary';
-import { PageTransition } from './components/animations/PageTransition';
 import { Onboarding } from './components/onboarding/Onboarding';
 import { getGreeting } from './lib/greeting';
 import { getTrainingRecords, getUserProfile } from './db/queries';
@@ -53,12 +51,6 @@ const games: {
     title: '听觉注意',
     description: '听觉选择性注意',
     priority: 'P2',
-  },
-  {
-    mode: 'mirror',
-    title: '镜像协调',
-    description: '双侧肢体协调',
-    priority: 'P3',
   },
   {
     mode: 'classify',
@@ -239,7 +231,8 @@ function Home() {
   );
 }
 
-function App() {
+// 根布局：主题管理、错误边界、应用布局、页面过渡动画
+function RootLayout() {
   const { loadProfile } = useUserStore();
   const { theme } = useSettingsStore();
   const location = useLocation();
@@ -248,6 +241,7 @@ function App() {
     loadProfile();
   }, [loadProfile]);
 
+  // 应用主题
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -279,23 +273,18 @@ function App() {
     <ErrorBoundary>
       <AppLayout>
         <AnimatePresence mode="wait">
-          <PageTransition key={location.pathname}>
-            <Routes location={location}>
-              <Route path="/" element={<Home />} />
-              <Route path="/stats" element={<Stats />} />
-              <Route path="/insights" element={<Insights />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/games/schulte" element={<Schulte />} />
-              <Route path="/games/stroop" element={<Stroop />} />
-              <Route path="/games/sequence" element={<Sequence />} />
-              <Route path="/games/auditory" element={<Auditory />} />
-              <Route path="/games/mirror" element={<Mirror />} />
-              <Route path="/games/classify" element={<Classify />} />
-              <Route path="/games/story" element={<Story />} />
-              <Route path="*" element={<div className="py-8 text-center">页面未找到</div>} />
-            </Routes>
-          </PageTransition>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{
+              duration: 0.2,
+              ease: [0.4, 0, 0.2, 1]
+            }}
+          >
+            <Outlet />
+          </motion.div>
         </AnimatePresence>
         <Onboarding />
       </AppLayout>
@@ -303,4 +292,24 @@ function App() {
   );
 }
 
-export default App;
+// 路由配置
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <RootLayout />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: 'stats', element: <Stats /> },
+      { path: 'insights', element: <Insights /> },
+      { path: 'settings', element: <Settings /> },
+      { path: 'profile', element: <Profile /> },
+      { path: 'games/schulte', element: <Schulte /> },
+      { path: 'games/stroop', element: <Stroop /> },
+      { path: 'games/sequence', element: <Sequence /> },
+      { path: 'games/auditory', element: <Auditory /> },
+      { path: 'games/classify', element: <Classify /> },
+      { path: 'games/story', element: <Story /> },
+      { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
+    ]
+  }
+]);

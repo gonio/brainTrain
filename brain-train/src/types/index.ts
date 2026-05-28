@@ -4,7 +4,6 @@ export type TrainingMode =
   | 'stroop'    // 字色干扰 - 固定1.5秒限制, 20题
   | 'sequence'  // 序列记忆 - 固定10个物品
   | 'auditory'  // 听觉注意 - 固定7位数字
-  | 'mirror'    // 镜像协调 - 固定三角形, 30秒
   | 'classify'  // 分类逻辑 - 固定15题, 3-5题切换规则
   | 'story';    // 情景联想 - 固定7个物品, 10秒记忆
 
@@ -74,19 +73,6 @@ export interface AuditoryDetails {
   correctCount: number;
 }
 
-export interface PathData {
-  points: { x: number; y: number; timestamp: number }[];
-}
-
-export interface MirrorDetails {
-  targetShape: string;
-  symmetryScore: number;
-  completeness?: number;
-  pathLength?: number;
-  leftPath: PathData;
-  rightPath: PathData;
-}
-
 export interface ClassifyDetails {
   ruleType: 'color' | 'shape' | 'size' | 'mixed';
   questionCount: number;
@@ -107,7 +93,6 @@ export type TrainingDetails =
   | StroopDetails
   | SequenceDetails
   | AuditoryDetails
-  | MirrorDetails
   | ClassifyDetails
   | StoryDetails;
 

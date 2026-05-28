@@ -17,7 +17,6 @@ const modeIcons: Record<TrainingMode, { icon: string; color: string }> = {
   stroop: { icon: 'palette', color: 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' },
   sequence: { icon: 'reorder', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' },
   auditory: { icon: 'hearing', color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' },
-  mirror: { icon: 'flip', color: 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' },
   classify: { icon: 'category', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' },
   story: { icon: 'psychology_alt', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' }
 };
@@ -27,7 +26,6 @@ const modeColors: Record<TrainingMode, string> = {
   stroop: 'bg-cyan-600',
   sequence: 'bg-indigo-600',
   auditory: 'bg-emerald-600',
-  mirror: 'bg-cyan-600',
   classify: 'bg-indigo-600',
   story: 'bg-indigo-600'
 };

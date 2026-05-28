@@ -11,7 +11,6 @@ const modeNames: Record<TrainingMode, string> = {
   stroop: '字色干扰',
   sequence: '序列记忆',
   auditory: '听觉注意',
-  mirror: '镜像协调',
   classify: '分类逻辑',
   story: '情景联想',
 };
@@ -22,7 +21,6 @@ const modeIcons: Record<TrainingMode, string> = {
   stroop: '🎨',
   sequence: '🧠',
   auditory: '👂',
-  mirror: '✋',
   classify: '🧩',
   story: '📖',
 };
