@@ -75,8 +75,8 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T001 检查项目依赖状态，确认所有npm包已正确安装 `brain-train/package.json`
-- [ ] T002 验证开发服务器可正常启动 `npm run dev`
+- [x] T001 检查项目依赖状态，确认所有npm包已正确安装 `brain-train/package.json`
+- [x] T002 验证开发服务器可正常启动 `npm run dev`
 
 ---
 
@@ -88,10 +88,10 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T003 更新数据库schema版本到v2，添加themeMode字段 `brain-train/src/db/index.ts`
-- [ ] T004 修复settingsStore主题逻辑，支持auto/light/dark三种模式 `brain-train/src/stores/settingsStore.ts`
-- [ ] T005 更新userStore添加用户资料编辑方法 `brain-train/src/stores/userStore.ts`
-- [ ] T006 创建问候语计算工具函数 `brain-train/src/lib/greeting.ts`
+- [x] T003 更新数据库schema版本到v2，添加themeMode字段 `brain-train/src/db/index.ts`
+- [x] T004 修复settingsStore主题逻辑，支持auto/light/dark三种模式 `brain-train/src/stores/settingsStore.ts`
+- [x] T005 更新userStore添加用户资料编辑方法 `brain-train/src/stores/userStore.ts`
+- [x] T006 创建问候语计算工具函数 `brain-train/src/lib/greeting.ts`
 
 ---
 
@@ -105,10 +105,10 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T007 [US1] 创建useTheme hook，处理系统主题监听和主题计算逻辑 `brain-train/src/hooks/useTheme.ts`
-- [ ] T008 [US1] 更新App.tsx应用根组件，集成useTheme初始化主题 `brain-train/src/App.tsx`
-- [ ] T009 [US1] 修复Settings.tsx设置页面主题切换UI，添加auto/light/dark三选一 `brain-train/src/pages/Settings.tsx`
-- [ ] T010 [US1] 验证主题持久化，刷新页面后主题选择保持一致
+- [x] T007 [US1] 创建useTheme hook，处理系统主题监听和主题计算逻辑 `brain-train/src/hooks/useTheme.ts`
+- [x] T008 [US1] 更新App.tsx应用根组件，集成useTheme初始化主题 `brain-train/src/App.tsx`
+- [x] T009 [US1] 修复Settings.tsx设置页面主题切换UI，添加auto/light/dark三选一 `brain-train/src/pages/Settings.tsx`
+- [x] T010 [US1] 验证主题持久化，刷新页面后主题选择保持一致
 
 ---
 
@@ -122,9 +122,9 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T011 [P] [US2] 扫描并替换所有英文文本 - stores目录 `brain-train/src/stores/*`
-- [ ] T012 [P] [US2] 扫描并替换所有英文文本 - components目录 `brain-train/src/components/*`
-- [ ] T013 [P] [US2] 扫描并替换所有英文文本 - pages目录 `brain-train/src/pages/*`
+- [x] T011 [P] [US2] 扫描并替换所有英文文本 - stores目录 `brain-train/src/stores/*`
+- [x] T012 [P] [US2] 扫描并替换所有英文文本 - components目录 `brain-train/src/components/*`
+- [x] T013 [P] [US2] 扫描并替换所有英文文本 - pages目录 `brain-train/src/pages/*`
 
 ---
 
@@ -138,11 +138,11 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T014 [US3] 创建训练统计查询函数，计算连续天数、平均值等 `brain-train/src/db/queries.ts`
-- [ ] T015 [US3] 更新Home.tsx首页，集成真实数据展示 `brain-train/src/pages/Home.tsx`
-- [ ] T016 [US3] 添加空状态提示组件，当无训练记录时友好引导 `brain-train/src/components/EmptyState.tsx`
-- [ ] T017 [US3] 移除首页训练模式区域的"查看全部"按钮 `brain-train/src/pages/Home.tsx`
-- [ ] T018 [US3] 集成问候语计算，根据时间段显示不同问候 `brain-train/src/pages/Home.tsx`
+- [x] T014 [US3] 创建训练统计查询函数，计算连续天数、平均值等 `brain-train/src/db/queries.ts`
+- [x] T015 [US3] 更新Home.tsx首页，集成真实数据展示 `brain-train/src/pages/Home.tsx`
+- [x] T016 [US3] 添加空状态提示组件，当无训练记录时友好引导 `brain-train/src/components/EmptyState.tsx`
+- [x] T017 [US3] 移除首页训练模式区域的"查看全部"按钮 `brain-train/src/pages/Home.tsx`
+- [x] T018 [US3] 集成问候语计算，根据时间段显示不同问候 `brain-train/src/pages/Home.tsx`
 
 ---
 
@@ -156,11 +156,11 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T019 [US4] 创建预设头像组件，显示6个可选头像 `brain-train/src/components/AvatarPicker.tsx`
-- [ ] T020 [US4] 添加头像上传功能，支持自定义图片 `brain-train/src/components/AvatarUploader.tsx`
-- [ ] T021 [US4] 创建或更新Profile.tsx用户资料页面，集成编辑功能 `brain-train/src/pages/Profile.tsx`
-- [ ] T022 [US4] 验证用户信息修改后首页和其他页面实时更新
-- [ ] T023 [US4] 添加用户资料编辑表单验证（名称长度限制等）
+- [x] T019 [US4] 创建预设头像组件，显示6个可选头像 `brain-train/src/components/AvatarPicker.tsx`
+- [x] T020 [US4] 添加头像上传功能，支持自定义图片 `brain-train/src/components/AvatarUploader.tsx`
+- [x] T021 [US4] 创建或更新Profile.tsx用户资料页面，集成编辑功能 `brain-train/src/pages/Profile.tsx`
+- [x] T022 [US4] 验证用户信息修改后首页和其他页面实时更新
+- [x] T023 [US4] 添加用户资料编辑表单验证（名称长度限制等）
 
 ---
 
@@ -174,11 +174,11 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T024 [US5] 创建GamePauseDialog组件，提供暂停/继续/退出选项 `brain-train/src/components/game/GamePauseDialog.tsx`
-- [ ] T025 [US5] 更新GameLayout.tsx游戏布局，支持导航栏显隐控制 `brain-train/src/components/layout/GameLayout.tsx`
-- [ ] T026 [US5] 为所有游戏页面添加暂停功能集成 `brain-train/src/pages/games/*.tsx`
-- [ ] T027 [US5] 实现游戏退出确认对话框，防止误操作
-- [ ] T028 [US5] 验证游戏结束后导航栏正常显示恢复
+- [x] T024 [US5] 创建GamePauseDialog组件，提供暂停/继续/退出选项 `brain-train/src/components/game/GamePauseDialog.tsx`
+- [x] T025 [US5] 更新GameLayout.tsx游戏布局，支持导航栏显隐控制 `brain-train/src/components/layout/GameLayout.tsx`
+- [x] T026 [US5] 为所有游戏页面添加暂停功能集成 `brain-train/src/pages/games/*.tsx`
+- [x] T027 [US5] 实现游戏退出确认对话框，防止误操作
+- [x] T028 [US5] 验证游戏结束后导航栏正常显示恢复
 
 ---
 
@@ -192,9 +192,9 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T029 [P] [US6] 测试并修复舒尔特表(schulte)游戏逻辑和得分计算 `brain-train/src/pages/games/Schulte.tsx`
-- [ ] T030 [P] [US6] 测试并修复字色干扰(stroop)和序列记忆(sequence)游戏 `brain-train/src/pages/games/Stroop.tsx`, `brain-train/src/pages/games/Sequence.tsx`
-- [ ] T031 [P] [US6] 测试并修复听觉注意(auditory)、镜像协调(mirror)、分类逻辑(classify)、情景联想(story)游戏 `brain-train/src/pages/games/*.tsx`
+- [x] T029 [P] [US6] 测试并修复舒尔特表(schulte)游戏逻辑和得分计算 `brain-train/src/pages/games/Schulte.tsx`
+- [x] T030 [P] [US6] 测试并修复字色干扰(stroop)和序列记忆(sequence)游戏 `brain-train/src/pages/games/Stroop.tsx`, `brain-train/src/pages/games/Sequence.tsx`
+- [x] T031 [P] [US6] 测试并修复听觉注意(auditory)、镜像协调(mirror)、分类逻辑(classify)、情景联想(story)游戏 `brain-train/src/pages/games/*.tsx`
 
 ---
 
@@ -206,9 +206,9 @@ Phase 9 (Polish)
 
 ### Tasks
 
-- [ ] T032 运行完整应用测试，验证所有修复点正常工作
-- [ ] T033 检查并清理无用代码和注释
-- [ ] T034 验证PWA功能正常（离线访问、manifest配置）
+- [x] T032 运行完整应用测试，验证所有修复点正常工作
+- [x] T033 检查并清理无用代码和注释
+- [x] T034 验证PWA功能正常（离线访问、manifest配置）
 
 ---
 

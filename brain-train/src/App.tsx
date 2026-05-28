@@ -223,6 +223,18 @@ function Home() {
           </div>
         )}
       </section>
+
+      {/* ICP备案信息 */}
+      <footer className="py-6 text-center">
+        <a
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          粤ICP备2026057219号
+        </a>
+      </footer>
     </>
   );
 }
