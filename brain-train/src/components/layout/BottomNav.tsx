@@ -48,16 +48,15 @@ export function BottomNav() {
 
 export function TopBar() {
   const { profile } = useUserStore();
-  const { dailyGoalMinutes } = useSettingsStore();
-  const [todayMinutes, setTodayMinutes] = useState(0);
+  const { dailyGoalSessions } = useSettingsStore();
+  const [todaySessions, setTodaySessions] = useState(0);
   const streak = profile?.currentStreak || 0;
 
-  // 加载今日训练时间
+  // 加载今日训练次数
   useEffect(() => {
     const loadTodayProgress = async () => {
       const records = await getTodayTrainingRecords();
-      const totalSeconds = records.reduce((sum, r) => sum + r.duration, 0);
-      setTodayMinutes(Math.round(totalSeconds / 60));
+      setTodaySessions(records.length);
     };
 
     loadTodayProgress();
@@ -66,8 +65,8 @@ export function TopBar() {
     return () => clearInterval(interval);
   }, []);
 
-  const progressPercent = Math.min(100, (todayMinutes / dailyGoalMinutes) * 100);
-  const isGoalCompleted = todayMinutes >= dailyGoalMinutes;
+  const progressPercent = Math.min(100, (todaySessions / dailyGoalSessions) * 100);
+  const isGoalCompleted = todaySessions >= dailyGoalSessions;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background/85 backdrop-blur-xl border-b border-border">
@@ -106,7 +105,7 @@ export function TopBar() {
                   />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-medium">
-                  {todayMinutes}/{dailyGoalMinutes}分钟
+                  {todaySessions}/{dailyGoalSessions}次
                 </span>
                 {isGoalCompleted && (
                   <motion.span

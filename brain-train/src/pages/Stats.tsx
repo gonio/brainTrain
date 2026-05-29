@@ -10,9 +10,6 @@ const modeNames: Record<TrainingMode, string> = {
   schulte: '舒尔特表',
   stroop: '字色干扰',
   sequence: '序列记忆',
-  auditory: '听觉注意',
-  classify: '分类逻辑',
-  story: '情景联想',
 };
 
 // 训练模式图标
@@ -20,16 +17,13 @@ const modeIcons: Record<TrainingMode, string> = {
   schulte: '🔢',
   stroop: '🎨',
   sequence: '🧠',
-  auditory: '👂',
-  classify: '🧩',
-  story: '📖',
 };
 
 export function Stats() {
   const [records, setRecords] = useState<TrainingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState({ current: 0, longest: 0 });
-  const [dailyGoal, setDailyGoal] = useState(20);
+  const [dailyGoal, setDailyGoal] = useState(5);
 
   const stats = useStats(records);
 
@@ -41,7 +35,7 @@ export function Stats() {
         getUserProfile(),
       ]);
       setRecords(fetchedRecords);
-      setDailyGoal(profile.preferences.dailyGoalMinutes);
+      setDailyGoal(profile.preferences.dailyGoalSessions);
       setStreak(calculateStreak(fetchedRecords));
       setLoading(false);
     };
@@ -75,12 +69,10 @@ export function Stats() {
     );
   }
 
-  // 计算今日训练时间
+  // 计算今日训练次数
   const today = new Date().toISOString().split('T')[0];
   const todayRecords = records.filter((r) => r.startedAt.startsWith(today));
-  const todayMinutes = Math.round(
-    todayRecords.reduce((sum, r) => sum + r.duration, 0) / 60
-  );
+  const todaySessions = todayRecords.length;
 
   return (
     <div className="py-8 space-y-8">
@@ -110,11 +102,11 @@ export function Stats() {
           transition={{ delay: 0.1 }}
           className="bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground p-5 rounded-2xl"
         >
-          <div className="text-[10px] uppercase tracking-wider opacity-80 mb-1">总训练时长</div>
+          <div className="text-[10px] uppercase tracking-wider opacity-80 mb-1">今日训练</div>
           <div className="text-3xl font-bold font-headline">
-            {Math.round(stats.overall.totalTime)}
+            {todaySessions}
           </div>
-          <div className="text-xs opacity-70 mt-1">分钟</div>
+          <div className="text-xs opacity-70 mt-1">次</div>
         </motion.div>
 
         <motion.div
@@ -174,21 +166,21 @@ export function Stats() {
         <div className="flex justify-between items-center mb-3">
           <span className="text-sm font-medium">今日目标</span>
           <span className="text-sm text-muted-foreground">
-            {todayMinutes} / {dailyGoal} 分钟
+            {todaySessions} / {dailyGoal} 次
           </span>
         </div>
         <div className="h-3 bg-accent rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary rounded-full"
             initial={{ width: 0 }}
-            animate={{ width: `${Math.min(100, (todayMinutes / dailyGoal) * 100)}%` }}
+            animate={{ width: `${Math.min(100, (todaySessions / dailyGoal) * 100)}%` }}
             transition={{ duration: 0.5, delay: 0.6 }}
           />
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          {todayMinutes >= dailyGoal
+          {todaySessions >= dailyGoal
             ? '🎉 今日目标已完成！'
-            : `还需要 ${dailyGoal - todayMinutes} 分钟达到目标`}
+            : `还需要 ${dailyGoal - todaySessions} 次达到目标`}
         </p>
       </motion.div>
 
@@ -217,7 +209,7 @@ export function Stats() {
                 <div className="flex-1">
                   <div className="font-medium">{modeNames[mode as TrainingMode]}</div>
                   <div className="text-xs text-muted-foreground">
-                    {modeStats.sessions} 次训练 · {Math.round(modeStats.totalTime)} 分钟
+                    {modeStats.sessions} 次训练
                   </div>
                 </div>
                 <div className="text-right">

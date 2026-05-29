@@ -1,11 +1,8 @@
 // Training modes
 export type TrainingMode =
-  | 'schulte'   // 舒尔特表 - 固定5x5降序
-  | 'stroop'    // 字色干扰 - 固定1.5秒限制, 20题
-  | 'sequence'  // 序列记忆 - 固定10个物品
-  | 'auditory'  // 听觉注意 - 固定7位数字
-  | 'classify'  // 分类逻辑 - 固定15题, 3-5题切换规则
-  | 'story';    // 情景联想 - 固定7个物品, 10秒记忆
+  | 'schulte'   // 舒尔特表
+  | 'stroop'    // 字色干扰
+  | 'sequence'; // 序列记忆
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -14,7 +11,7 @@ export interface UserPreferences {
   theme: Theme;
   soundEnabled: boolean;
   ttsEnabled: boolean;
-  dailyGoalMinutes: number;
+  dailyGoalSessions: number;
   hasSeenOnboarding?: boolean;
 }
 
@@ -65,36 +62,8 @@ export interface SequenceDetails {
   itemAccuracy: number;
 }
 
-export interface AuditoryDetails {
-  digitCount: number;
-  withNoise: boolean;
-  digits: number[];
-  userDigits: number[];
-  correctCount: number;
-}
-
-export interface ClassifyDetails {
-  ruleType: 'color' | 'shape' | 'size' | 'mixed';
-  questionCount: number;
-  correctCount: number;
-  avgReactionTime: number;
-  ruleSwitches: number;
-}
-
-export interface StoryDetails {
-  items: string[];
-  userStory: string;
-  storyCompleteness: number;
-  recallAccuracy: number;
-}
-
-export type TrainingDetails =
-  | SchulteDetails
-  | StroopDetails
-  | SequenceDetails
-  | AuditoryDetails
-  | ClassifyDetails
-  | StoryDetails;
+// 训练详情联合类型
+export type TrainingDetails = SchulteDetails | StroopDetails | SequenceDetails;
 
 // Training record
 export interface TrainingRecord {
@@ -111,10 +80,9 @@ export interface TrainingRecord {
 // Daily goal
 export interface DailyGoal {
   date: string;
-  targetMinutes: number;
-  actualMinutes: number;
+  targetSessions: number;
+  completedSessions: number;
   completed: boolean;
-  sessions: string[];
 }
 
 // Statistics
@@ -123,20 +91,17 @@ export interface ModeStatistics {
   avgScore: number;
   avgAccuracy: number;
   bestScore: number;
-  totalTime: number;
 }
 
 export interface DailyStatistics {
   date: string;
   sessions: number;
-  totalTime: number;
   avgScore: number;
 }
 
 export interface Statistics {
   overall: {
     totalSessions: number;
-    totalTime: number;
     avgScore: number;
     avgAccuracy: number;
   };

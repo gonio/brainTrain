@@ -6,20 +6,24 @@ interface SettingsState {
   theme: Theme;
   soundEnabled: boolean;
   ttsEnabled: boolean;
-  dailyGoalMinutes: number;
+  dailyGoalSessions: number;
+  ruleDismissed: Record<string, boolean>;
   setTheme: (theme: Theme) => void;
   toggleSound: () => void;
   toggleTTS: () => void;
-  setDailyGoalMinutes: (minutes: number) => void;
+  setDailyGoalSessions: (sessions: number) => void;
+  dismissRule: (mode: string) => void;
+  isRuleDismissed: (mode: string) => boolean;
 }
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'auto',
       soundEnabled: true,
       ttsEnabled: true,
-      dailyGoalMinutes: 20,
+      dailyGoalSessions: 5,
+      ruleDismissed: {},
 
       setTheme: (theme) => set({ theme }),
 
@@ -27,10 +31,26 @@ export const useSettingsStore = create<SettingsState>()(
 
       toggleTTS: () => set((state) => ({ ttsEnabled: !state.ttsEnabled })),
 
-      setDailyGoalMinutes: (minutes) => set({ dailyGoalMinutes: minutes }),
+      setDailyGoalSessions: (sessions) => set({ dailyGoalSessions: sessions }),
+
+      dismissRule: (mode) =>
+        set((state) => ({
+          ruleDismissed: { ...state.ruleDismissed, [mode]: true },
+        })),
+
+      isRuleDismissed: (mode) => get().ruleDismissed[mode] === true,
     }),
     {
-      name: 'brain-train-settings'
+      name: 'brain-train-settings',
+      // 兼容旧版本：dailyGoalMinutes → dailyGoalSessions
+      migrate: (persistedState: unknown) => {
+        const persisted = persistedState as Record<string, unknown>;
+        if ('dailyGoalMinutes' in persisted && !('dailyGoalSessions' in persisted)) {
+          persisted['dailyGoalSessions'] = 5;
+          delete persisted['dailyGoalMinutes'];
+        }
+        return persisted;
+      },
     }
   )
 );

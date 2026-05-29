@@ -1,146 +1,65 @@
-# Quick Start: 应用问题修复与优化
+# Quickstart: 应用精简与统一化改造
 
-## 前置要求
+## 前置条件
 
-- Node.js 18+
-- 已存在的 `brain-train` 项目（由 001-focus-training-app 创建）
+- Node.js 20+
+- pnpm 9+
+- 现有项目可正常 `pnpm run dev` 和 `pnpm run build`
 
-## 环境设置
+## 实施顺序
 
-```bash
-cd brain-train
+### 阶段 1: 删除 3 个游戏
 
-# 安装依赖（如有新增）
-npm install
+1. 删除 6 个文件: `pages/games/{Auditory,Classify,Story}.tsx`, `components/game/{AuditoryGame,ClassifyGame,StoryGame}.tsx`
+2. 修改 `types/index.ts`: 从 `TrainingMode` 联合类型中移除 `'auditory' | 'classify' | 'story'`，删除 `AuditoryDetails`, `ClassifyDetails`, `StoryDetails` 接口，从 `TrainingDetails` 联合类型中移除它们
+3. 修改 `App.tsx`: 从 `games` 数组中移除 3 个游戏对象，从路由 `children` 中移除 3 个路由，移除 3 个 import
+4. 修改 `components/game/index.ts`: 移除 3 个导出
+5. 修改 `components/game/GameCard.tsx`: 从 `modeIcons` 和 `modeColors` 中移除 3 个条目
+6. 修改 `components/layout/AppLayout.tsx`: 从 `GAME_PATHS` 中移除 3 个路径
+7. 修改 `lib/gameplayInstructions.ts`: 移除 3 个指令对象和映射条目
+8. 修改 `lib/stats.ts`: 从 modes 数组中移除 3 个值
+9. 修改 `hooks/useStats.ts`: 从 modes 数组中移除 3 个值
+10. 修改 `db/queries.ts`: 从 modes 数组中移除 3 个值
+11. 修改 `pages/Stats.tsx`: 从 `modeNames` 和 `modeIcons` 中移除 3 个条目
+12. 运行 `npx tsc --noEmit` 验证无编译错误
+13. 运行 `pnpm run build` 验证构建成功
 
-# 启动开发服务器
-npm run dev
-```
+### 阶段 2: 统一评分制 (满分 100)
 
-## 开发工作流
+1. 修改 `db/index.ts`: 升级 Dexie 版本 v1 → v2，在 upgrade 中清除 trainingRecords 和 dailyGoals
+2. 修改 `pages/games/Schulte.tsx`: 替换评分算法为 0-100 加权模型
+3. 修改 `pages/games/Stroop.tsx`: 替换评分算法为 0-100 加权模型
+4. 修改 `pages/games/Sequence.tsx`: 替换评分算法为 0-100 加权模型
+5. 验证：完成任意游戏后检查分数在 0-100 范围
 
-### 1. 主题修复测试
+### 阶段 3: 游戏规则弹窗
 
-```bash
-# 测试主题切换
-1. 打开应用，检查是否跟随系统主题
-2. 进入设置页面，手动切换主题
-3. 刷新页面，验证主题偏好已保存
-4. 切换系统主题，验证应用是否响应（当设置为 auto 时）
-```
+1. 修改 `stores/settingsStore.ts`: 新增 `ruleDismissed` 字段和 `dismissRule(mode)` action，将 `dailyGoalMinutes` 改为 `dailyGoalSessions`
+2. 新增 `components/game/GameStartScreen.tsx`: 通用开始页面组件
+3. 修改 `pages/games/Schulte.tsx`: 在 idle 状态渲染 GameStartScreen
+4. 修改 `pages/games/Stroop.tsx`: 在 idle 状态渲染 GameStartScreen
+5. 修改 `pages/games/Sequence.tsx`: 在 idle 状态渲染 GameStartScreen
+6. 验证：首次进入游戏弹出规则，勾选"不再提示"后关闭，再次进入不弹出，"展示规则"按钮始终可用
 
-### 2. 中文本地化验证
+### 阶段 4: 统计从时间改为次数
 
-```bash
-# 检查所有页面文本
-- 首页：问候语、训练模式名称、统计标签
-- 统计页：所有图表标签和提示
-- 设置页：所有设置项名称和描述
-- 游戏页：游戏规则、按钮、结果页面
-- 导航栏：所有导航项
+1. 修改 `types/index.ts`: 从 `OverallStatistics` 和 `ModeStatistics` 中移除 `totalTime` 字段
+2. 修改 `lib/stats.ts`: 从 `calculateOverallStats` 和 `calculateModeStats` 中移除时间计算
+3. 修改 `pages/Stats.tsx`: 所有时间维度显示改为次数
+4. 修改 `pages/Settings.tsx`: 目标选项从分钟改为次数
+5. 修改 `components/layout/BottomNav.tsx` (TopBar): 进度条从"N/M分钟"改为"N/M次"
+6. 修改 `App.tsx` (Home): 周数据展示适配
+7. 修改 `db/queries.ts`: dailyGoal 相关查询适配次数制
+8. 验证：所有页面统计维度为次数，不出现"分钟"
 
-# 确保无英文残留
-```
+## 验证检查清单
 
-### 3. 首页数据验证
-
-```bash
-# 测试场景 1：无训练记录
-1. 清空 IndexedDB 或使用无痕模式
-2. 打开首页
-3. 验证显示空状态提示
-
-# 测试场景 2：有训练记录
-1. 完成几次训练
-2. 返回首页
-3. 验证统计数据与实际记录匹配
-4. 验证连续天数计算正确
-```
-
-### 4. 用户资料编辑测试
-
-```bash
-# 编辑用户名
-1. 进入个人资料页面
-2. 点击编辑用户名
-3. 输入新名称并保存
-4. 验证首页显示新名称
-
-# 编辑头像
-1. 点击修改头像
-2. 选择预设头像 / 上传自定义头像
-3. 保存并验证更新
-```
-
-### 5. 小游戏交互测试
-
-```bash
-# 导航隐藏测试
-1. 进入任意小游戏
-2. 验证顶部和底部导航已隐藏
-3. 游戏过程中无导航干扰
-
-# 暂停/退出测试
-1. 游戏中点击暂停/返回按钮
-2. 验证显示暂停对话框
-3. 测试"继续"、"重新开始"、"退出"三个选项
-4. 验证退出时保存进度（如适用）
-```
-
-### 6. 游戏功能测试
-
-逐个测试7个游戏，验证：
-- 游戏规则逻辑正确
-- 得分计算准确
-- 计时功能正常
-- 结束条件判断正确
-- 成绩正确保存到记录
-
-## 测试命令
-
-```bash
-# 运行单元测试
-npm run test
-
-# 运行特定测试
-npm run test -- stores/settingsStore
-
-# E2E 测试（如有配置）
-npm run test:e2e
-```
-
-## 调试技巧
-
-### 查看 IndexedDB
-
-1. 打开 DevTools (F12)
-2. 进入 Application/应用 标签
-3. 选择 IndexedDB → BrainTrainDB
-4. 查看各表数据
-
-### 测试主题切换
-
-```javascript
-// 在控制台手动切换系统主题偏好
-// Chrome DevTools → Rendering → Emulate CSS media feature prefers-color-scheme
-```
-
-### 验证数据查询
-
-```javascript
-// 在控制台执行
-const db = await import('./src/db').then(m => m.db);
-const records = await db.trainingRecords.toArray();
-console.log(records);
-```
-
-## 部署检查清单
-
-- [ ] 所有测试通过
-- [ ] 主题切换在各浏览器正常
-- [ ] 无英文文本残留
-- [ ] 首页数据显示正确
-- [ ] 用户资料编辑功能正常
-- [ ] 小游戏交互流畅
-- [ ] 游戏功能无bug
-- [ ] PWA 功能正常
+- [ ] `npx tsc --noEmit` 零错误
+- [ ] `pnpm run build` 成功
+- [ ] 首页只显示 3 个游戏卡片
+- [ ] 3 个游戏均可正常完成，分数 0-100
+- [ ] 首次进入游戏弹出规则，"不再提示"生效
+- [ ] "展示规则"按钮始终可用
+- [ ] 统计页所有指标为次数维度
+- [ ] 每日目标为"N次"
+- [ ] 无 auditory/classify/story 任何残留引用

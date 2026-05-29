@@ -51,8 +51,10 @@ claude mcp add stitch --transport http https://stitch.googleapis.com/mcp \
 ```
 
 ## Recent Changes
+- 002-app-bugfix-polish: Added TypeScript 5.x + React 19 + Vite 8, Tailwind CSS 4, shadcn/ui, Zustand, Dexie.js, Framer Motion, Howler.js, React Router v6 (data router)
 - 002-app-bugfix-polish: Added TypeScript 5.x + React 19 + React, Vite, Tailwind CSS, shadcn/ui, Zustand, Dexie.js, Framer Motion, Howler.js
 - 001-focus-training-app: Added TypeScript 5.x + React 19 + React, Vite, Tailwind CSS, shadcn/ui, Zustand, Dexie.js, Framer Motion, Howler.js
-- 001-focus-training-app: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 ## Active Technologies
+- TypeScript 5.x + React 19 + Vite 8, Tailwind CSS 4, shadcn/ui, Zustand, Dexie.js, Framer Motion, Howler.js, React Router v6 (data router) (002-app-bugfix-polish)
+- IndexedDB via Dexie.js (3张表: userProfile, trainingRecords, dailyGoals) (002-app-bugfix-polish)

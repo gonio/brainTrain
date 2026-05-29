@@ -3,7 +3,6 @@ import type { TrainingRecord, TrainingMode, ModeStatistics, DailyStatistics } fr
 export function calculateOverallStats(records: TrainingRecord[]) {
   return {
     totalSessions: records.length,
-    totalTime: records.reduce((sum, r) => sum + r.duration, 0) / 60,
     avgScore: records.length > 0
       ? records.reduce((sum, r) => sum + r.score, 0) / records.length
       : 0,
@@ -14,7 +13,7 @@ export function calculateOverallStats(records: TrainingRecord[]) {
 }
 
 export function calculateModeStats(records: TrainingRecord[]): Record<TrainingMode, ModeStatistics> {
-  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'classify', 'story'];
+  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence'];
   const result = {} as Record<TrainingMode, ModeStatistics>;
 
   for (const mode of modes) {
@@ -30,7 +29,6 @@ export function calculateModeStats(records: TrainingRecord[]): Record<TrainingMo
       bestScore: modeRecords.length > 0
         ? Math.max(...modeRecords.map(r => r.score), 0)
         : 0,
-      totalTime: modeRecords.reduce((sum, r) => sum + r.duration, 0) / 60
     };
   }
 
@@ -51,7 +49,6 @@ export function calculateTrend(records: TrainingRecord[], days: number = 30): Da
     trend.push({
       date: dateStr,
       sessions: dayRecords.length,
-      totalTime: dayRecords.reduce((sum, r) => sum + r.duration, 0) / 60,
       avgScore: dayRecords.length > 0
         ? dayRecords.reduce((sum, r) => sum + r.score, 0) / dayRecords.length
         : 0

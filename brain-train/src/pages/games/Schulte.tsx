@@ -6,6 +6,7 @@ import { useAudio } from '../../hooks/useAudio';
 import { SchulteGrid } from '../../components/game/SchulteGrid';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
+import { GameStartScreen } from '../../components/game/GameStartScreen';
 import type { TrainingDetails } from '../../types';
 
 // 固定5x5配置
@@ -25,6 +26,8 @@ export function Schulte() {
   const [finalScore, setFinalScore] = useState(0);
 
   const isPlaying = status === 'playing';
+  const isPaused = status === 'paused';
+  const isIdle = status === 'idle';
 
   // Timer update
   useEffect(() => {
@@ -66,11 +69,11 @@ export function Schulte() {
     const endTime = Date.now();
     const totalTime = (endTime - gameStartTime) / 1000;
 
-    // Calculate score: base 1000 - time penalty - error penalty
+    // 0-100 分制：准确度 70% + 速度 30%
     const maxNumber = GRID_SIZE * GRID_SIZE;
-    const timePenalty = Math.floor(totalTime * 10);
-    const errorPenalty = errors * 50;
-    const score = Math.max(0, 1000 - timePenalty - errorPenalty + maxNumber * 10);
+    const accuracyScore = ((maxNumber - errors) / maxNumber) * 100;
+    const speedScore = Math.max(0, 100 - (totalTime - 20) * 2);
+    const score = Math.min(100, Math.round(accuracyScore * 0.7 + speedScore * 0.3));
 
     const accuracy = Math.round(((maxNumber - errors) / maxNumber) * 100);
 
@@ -106,16 +109,14 @@ export function Schulte() {
       />
 
       <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
-        {/* 未开始游戏时显示标题 */}
-        {!isPlaying && !showResult && (
-          <div className="mb-4 self-start">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
-              舒尔特表
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              按顺序点击数字1-25，训练视觉搜索能力。
-            </p>
-          </div>
+        {/* 游戏开始页面 */}
+        {isIdle && !showResult && (
+          <GameStartScreen
+            mode="schulte"
+            title="舒尔特表"
+            description="按顺序点击数字1-25，训练视觉搜索能力"
+            onStart={handleStart}
+          />
         )}
 
         {/* Game Grid - 占据剩余空间 */}
@@ -131,7 +132,7 @@ export function Schulte() {
         </div>
 
         {/* Metrics - Target, Accuracy, Avg Speed */}
-        {isPlaying && (
+        {(isPlaying || isPaused) && (
           <div className="mb-8 flex justify-center gap-12">
             <div className="flex flex-col items-center">
               <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">目标</span>
@@ -156,17 +157,6 @@ export function Schulte() {
 
         {/* Controls */}
         <div className="flex justify-center gap-4">
-          {!isPlaying && !showResult && (
-            <motion.button
-              onClick={handleStart}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
-            >
-              开始训练
-            </motion.button>
-          )}
-
           {showResult && (
             <motion.button
               onClick={handleStart}

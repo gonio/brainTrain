@@ -5,9 +5,8 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useAudio } from '../../hooks/useAudio';
 import { SequenceGame } from '../../components/game/SequenceGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
-import { GameInstructions } from '../../components/game/GameInstructions';
 import { GameControlBar } from '../../components/game/GameControlBar';
-import { sequenceInstructions } from '../../lib/gameplayInstructions';
+import { GameStartScreen } from '../../components/game/GameStartScreen';
 import type { TrainingDetails } from '../../types';
 
 // 难度配置
@@ -33,6 +32,7 @@ export function Sequence() {
   } | null>(null);
 
   const isPlaying = status === 'playing';
+  const isIdle = status === 'idle';
   const config = DIFFICULTY_CONFIG[difficulty];
 
   const handleStart = useCallback(() => {
@@ -50,13 +50,9 @@ export function Sequence() {
   }) => {
     setGameResult(result);
 
-    // 计算分数
-    const positionWeight = 0.6; // 位置准确率权重
-    const itemWeight = 0.4;     // 物品准确率权重
-
-    const baseScore = 500;
-    const accuracyScore = (result.positionAccuracy * positionWeight + result.itemAccuracy * itemWeight) * 5;
-    const score = Math.round(baseScore + accuracyScore);
+    // 0-100 分制：位置准确率 60% + 物品准确率 40%
+    const accuracyScore = result.positionAccuracy * 0.6 + result.itemAccuracy * 0.4;
+    const score = Math.min(100, Math.round(accuracyScore));
 
     const accuracy = Math.round((result.positionAccuracy + result.itemAccuracy) / 2);
 
@@ -111,30 +107,18 @@ export function Sequence() {
     <>
       <GameControlBar title="序列记忆" showTimer={isPlaying} elapsedTime={0} />
       <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
-        {/* Header */}
-        {!isPlaying && !showResult && (
-          <div className="mb-3 self-start">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
-              序列记忆
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              记住物品出现的顺序，然后按照相同顺序点击它们。
-            </p>
-          </div>
-        )}
-
-        {/* 玩法说明 */}
-        {!isPlaying && !showResult && (
-          <GameInstructions
-            title={sequenceInstructions.title}
-            description={sequenceInstructions.objective}
-            steps={sequenceInstructions.howToPlay}
-            className="mb-3"
+        {/* 游戏开始页面 */}
+        {isIdle && !showResult && (
+          <GameStartScreen
+            mode="sequence"
+            title="序列记忆"
+            description="记住物品出现的顺序，然后按照相同顺序点击它们"
+            onStart={handleStart}
           />
         )}
 
-      {/* 难度选择 */}
-      {!isPlaying && !showResult && <DifficultySelector />}
+        {/* 难度选择 - 仅在非游戏开始页面时显示（已集成到GameStartScreen下方） */}
+        {!isPlaying && !showResult && <DifficultySelector />}
 
       {/* 游戏区域 */}
       <div className="flex-1 flex flex-col justify-start py-2 mb-4">
@@ -147,17 +131,6 @@ export function Sequence() {
 
       {/* 控制按钮 */}
       <div className="flex justify-center gap-4">
-        {!isPlaying && !showResult && (
-          <motion.button
-            onClick={handleStart}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
-          >
-            开始训练
-          </motion.button>
-        )}
-
         {showResult && (
           <motion.button
             onClick={handleStart}

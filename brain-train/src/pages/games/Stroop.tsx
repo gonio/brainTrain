@@ -4,9 +4,8 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useAudio } from '../../hooks/useAudio';
 import { StroopGame } from '../../components/game/StroopGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
-import { GameInstructions } from '../../components/game/GameInstructions';
 import { GameControlBar } from '../../components/game/GameControlBar';
-import { stroopInstructions } from '../../lib/gameplayInstructions';
+import { GameStartScreen } from '../../components/game/GameStartScreen';
 import type { TrainingDetails, StroopQuestion } from '../../types';
 
 // 游戏配置
@@ -25,6 +24,8 @@ export function Stroop() {
   const [finalScore, setFinalScore] = useState(0);
 
   const isPlaying = status === 'playing';
+  const isPaused = status === 'paused';
+  const isIdle = status === 'idle';
 
   // 计时器
   useEffect(() => {
@@ -71,11 +72,10 @@ export function Stroop() {
       const correctCount = [...questions, question].filter(q => q.isCorrect).length;
       const avgReactionTime = [...questions, question].reduce((sum, q) => sum + q.reactionTime, 0) / QUESTION_COUNT;
 
-      // 计算分数：基础分 + 准确率奖励 - 平均反应时间惩罚
-      const baseScore = 500;
-      const accuracyBonus = (correctCount / QUESTION_COUNT) * 500;
-      const speedBonus = Math.max(0, 300 - avgReactionTime);
-      const score = Math.round(baseScore + accuracyBonus + speedBonus);
+      // 0-100 分制：准确度 70% + 速度 30%
+      const accuracyScore = (correctCount / QUESTION_COUNT) * 100;
+      const speedScore = Math.max(0, 100 - (avgReactionTime - 300) / 10);
+      const score = Math.min(100, Math.round(accuracyScore * 0.7 + speedScore * 0.3));
 
       const accuracy = Math.round((correctCount / QUESTION_COUNT) * 100);
 
@@ -108,30 +108,18 @@ export function Stroop() {
     <>
       <GameControlBar title="字色干扰" showTimer={isPlaying} elapsedTime={Math.floor(elapsedTime)} />
       <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
-        {/* Header */}
-        {!isPlaying && !showResult && (
-          <div className="mb-3 self-start">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-1 font-headline">
-              字色干扰
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              忽略文字含义，快速识别文字的颜色。
-            </p>
-          </div>
-        )}
-
-        {/* 玩法说明 */}
-        {!isPlaying && !showResult && (
-          <GameInstructions
-            title={stroopInstructions.title}
-            description={stroopInstructions.objective}
-            steps={stroopInstructions.howToPlay}
-            className="mb-3"
+        {/* 游戏开始页面 */}
+        {isIdle && !showResult && (
+          <GameStartScreen
+            mode="stroop"
+            title="字色干扰"
+            description="忽略文字含义，快速识别文字的颜色"
+            onStart={handleStart}
           />
         )}
 
       {/* 游戏统计 */}
-      {isPlaying && (
+      {(isPlaying || isPaused) && (
         <div className="mb-6 grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-accent rounded-xl">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">正确</div>
@@ -160,15 +148,6 @@ export function Stroop() {
 
       {/* 控制按钮 */}
       <div className="flex justify-center gap-4">
-        {!isPlaying && !showResult && (
-          <button
-            onClick={handleStart}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all active:scale-95 shadow-lg"
-          >
-            开始训练
-          </button>
-        )}
-
         {isPlaying && (
           <button
             onClick={() => {
@@ -179,7 +158,10 @@ export function Stroop() {
                 : 0;
 
               const score = questions.length > 0
-                ? Math.round((correctCount / questions.length) * 500 + Math.max(0, 300 - avgReactionTime))
+                ? Math.min(100, Math.round(
+                    (correctCount / questions.length) * 100 * 0.7
+                    + Math.max(0, 100 - (avgReactionTime - 300) / 10) * 0.3
+                  ))
                 : 0;
 
               const accuracy = questions.length > 0

@@ -10,19 +10,19 @@ const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'auto', label: '自动', icon: '🌓' },
 ];
 
-// 每日目标选项
-const goalOptions = [10, 15, 20, 30, 45, 60];
+// 每日目标选项（次数）
+const goalOptions = [3, 5, 8, 10, 15];
 
 export function Settings() {
   const {
     theme,
     soundEnabled,
     ttsEnabled,
-    dailyGoalMinutes,
+    dailyGoalSessions,
     setTheme,
     toggleSound,
     toggleTTS,
-    setDailyGoalMinutes,
+    setDailyGoalSessions,
   } = useSettingsStore();
 
   return (
@@ -141,20 +141,20 @@ export function Settings() {
         {/* 每日目标 */}
         <div className="bg-surface-container p-4 rounded-2xl">
           <label className="text-sm font-medium mb-3 block">每日训练目标</label>
-          <div className="grid grid-cols-3 gap-2">
-            {goalOptions.map((minutes) => (
+          <div className="grid grid-cols-5 gap-2">
+            {goalOptions.map((sessions) => (
               <button
-                key={minutes}
-                onClick={() => setDailyGoalMinutes(minutes)}
+                key={sessions}
+                onClick={() => setDailyGoalSessions(sessions)}
                 className={cn(
                   'p-3 rounded-xl text-center transition-all border-2',
-                  dailyGoalMinutes === minutes
+                  dailyGoalSessions === sessions
                     ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
                     : 'bg-surface-container border-border hover:bg-surface-container-high'
                 )}
               >
-                <div className="text-lg font-bold font-headline">{minutes}</div>
-                <div className="text-xs">分钟</div>
+                <div className="text-lg font-bold font-headline">{sessions}</div>
+                <div className="text-xs">次</div>
               </button>
             ))}
           </div>
@@ -178,6 +178,16 @@ export function Settings() {
             <div className="font-bold text-lg">BrainTrain</div>
             <div className="text-sm text-muted-foreground">专注力训练应用</div>
             <div className="text-xs text-muted-foreground mt-1">版本 1.0.0</div>
+          </div>
+          <div className="border-t border-border pt-3 mt-2 text-center">
+            <a
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            >
+              粤ICP备2026057219号
+            </a>
           </div>
         </div>
       </motion.section>

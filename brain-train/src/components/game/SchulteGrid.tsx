@@ -48,13 +48,6 @@ export function SchulteGrid({
     setLastClickTime(startTime);
   }, [startTime]);
 
-  // Check for completion
-  useEffect(() => {
-    if (isActive && clickedNumbers.size === GRID_SIZE * GRID_SIZE) {
-      onComplete?.();
-    }
-  }, [isActive, clickedNumbers, onComplete]);
-
   const handleNumberClick = useCallback((number: number) => {
     if (!isActive || clickedNumbers.has(number)) return;
 
@@ -62,13 +55,19 @@ export function SchulteGrid({
     const clickDuration = (currentTime - lastClickTime) / 1000;
 
     if (number === expectedNumber) {
-      setClickedNumbers(prev => new Set([...prev, number]));
+      const newClicked = new Set([...clickedNumbers, number]);
+      setClickedNumbers(newClicked);
       setLastClickTime(currentTime);
       onCorrectClick(number, clickDuration);
+
+      // 在点击回调中直接检查完成（避免 useEffect 竞态）
+      if (newClicked.size === GRID_SIZE * GRID_SIZE) {
+        onComplete?.();
+      }
     } else {
       onWrongClick();
     }
-  }, [isActive, clickedNumbers, expectedNumber, lastClickTime, onCorrectClick, onWrongClick]);
+  }, [isActive, clickedNumbers, expectedNumber, lastClickTime, onCorrectClick, onWrongClick, onComplete]);
 
   return (
     <div className="flex items-center justify-center w-full h-full">

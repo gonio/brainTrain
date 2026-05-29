@@ -80,14 +80,15 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Update daily goal
       const today = getToday();
       const goal = await getDailyGoal(today);
-      const actualMinutes = Math.floor(duration / 60);
+
+      const completedSessions = (goal?.completedSessions || 0) + 1;
+      const targetSessions = goal?.targetSessions || 5;
 
       await updateDailyGoal({
         date: today,
-        targetMinutes: goal?.targetMinutes || 20,
-        actualMinutes: (goal?.actualMinutes || 0) + actualMinutes,
-        completed: (goal?.actualMinutes || 0) + actualMinutes >= (goal?.targetMinutes || 20),
-        sessions: [...(goal?.sessions || []), record.id]
+        targetSessions,
+        completedSessions,
+        completed: completedSessions >= targetSessions,
       });
 
       set({

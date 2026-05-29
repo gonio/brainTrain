@@ -16,7 +16,7 @@ const defaultUserProfile: UserProfile = {
     theme: 'auto',
     soundEnabled: true,
     ttsEnabled: true,
-    dailyGoalMinutes: 20
+    dailyGoalSessions: 5
   }
 };
 
@@ -96,7 +96,6 @@ export async function computeStatistics(): Promise<Statistics> {
 
   const overall = {
     totalSessions: records.length,
-    totalTime: records.reduce((sum, r) => sum + r.duration, 0) / 60,
     avgScore: records.length > 0
       ? records.reduce((sum, r) => sum + r.score, 0) / records.length
       : 0,
@@ -105,7 +104,7 @@ export async function computeStatistics(): Promise<Statistics> {
       : 0
   };
 
-  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'classify', 'story'];
+  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence'];
   const byMode: Statistics['byMode'] = {} as Statistics['byMode'];
 
   for (const mode of modes) {
@@ -121,7 +120,6 @@ export async function computeStatistics(): Promise<Statistics> {
       bestScore: modeRecords.length > 0
         ? Math.max(...modeRecords.map(r => r.score))
         : 0,
-      totalTime: modeRecords.reduce((sum, r) => sum + r.duration, 0) / 60
     };
   }
 
@@ -139,7 +137,6 @@ export async function computeStatistics(): Promise<Statistics> {
     trend.push({
       date: dateStr,
       sessions: dayRecords.length,
-      totalTime: dayRecords.reduce((sum, r) => sum + r.duration, 0) / 60,
       avgScore: dayRecords.length > 0
         ? dayRecords.reduce((sum, r) => sum + r.score, 0) / dayRecords.length
         : 0

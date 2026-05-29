@@ -4,7 +4,4 @@ export { Timer, CountdownTimer } from './Timer';
 export { SchulteGrid } from './SchulteGrid';
 export { StroopGame } from './StroopGame';
 export { SequenceGame } from './SequenceGame';
-export { AuditoryGame } from './AuditoryGame';
-export { ClassifyGame } from './ClassifyGame';
-export { StoryGame } from './StoryGame';
-export { GameInstructions } from './GameInstructions';
+export { GameInstructionsDialog } from './GameInstructions';

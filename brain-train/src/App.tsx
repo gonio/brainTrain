@@ -12,9 +12,6 @@ import Profile from './pages/Profile';
 import { Schulte } from './pages/games/Schulte';
 import { Stroop } from './pages/games/Stroop';
 import { Sequence } from './pages/games/Sequence';
-import { Auditory } from './pages/games/Auditory';
-import { Classify } from './pages/games/Classify';
-import { Story } from './pages/games/Story';
 import { ErrorBoundary } from './components/error-boundary/ErrorBoundary';
 import { Onboarding } from './components/onboarding/Onboarding';
 import { getGreeting } from './lib/greeting';
@@ -46,24 +43,6 @@ const games: {
     description: '工作记忆训练',
     priority: 'P2',
   },
-  {
-    mode: 'auditory',
-    title: '听觉注意',
-    description: '听觉选择性注意',
-    priority: 'P2',
-  },
-  {
-    mode: 'classify',
-    title: '分类逻辑',
-    description: '规则导向分类',
-    priority: 'P3',
-  },
-  {
-    mode: 'story',
-    title: '情景联想',
-    description: '场景记忆联想',
-    priority: 'P3',
-  }
 ];
 
 // 计算本周训练数据（最近7天）
@@ -216,17 +195,6 @@ function Home() {
         )}
       </section>
 
-      {/* ICP备案信息 */}
-      <footer className="py-6 text-center">
-        <a
-          href="https://beian.miit.gov.cn/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          粤ICP备2026057219号
-        </a>
-      </footer>
     </>
   );
 }
@@ -306,9 +274,6 @@ export const router = createBrowserRouter([
       { path: 'games/schulte', element: <Schulte /> },
       { path: 'games/stroop', element: <Stroop /> },
       { path: 'games/sequence', element: <Sequence /> },
-      { path: 'games/auditory', element: <Auditory /> },
-      { path: 'games/classify', element: <Classify /> },
-      { path: 'games/story', element: <Story /> },
       { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
     ]
   }

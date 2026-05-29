@@ -26,7 +26,6 @@ export function useModeStats(records: TrainingRecord[], mode: TrainingMode): Mod
       bestScore: modeRecords.length > 0
         ? Math.max(...modeRecords.map(r => r.score), 0)
         : 0,
-      totalTime: modeRecords.reduce((sum, r) => sum + r.duration, 0) / 60
     };
   }, [records, mode]);
 }
@@ -45,7 +44,7 @@ export function useRecentRecords(records: TrainingRecord[], count: number = 10):
 
 export function useBestScores(records: TrainingRecord[]): Record<TrainingMode, number> {
   return useMemo(() => {
-    const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'auditory', 'classify', 'story'];
+    const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence'];
     const result = {} as Record<TrainingMode, number>;
 
     for (const mode of modes) {

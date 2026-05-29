@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useBlocker } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../stores/gameStore';
@@ -21,6 +21,8 @@ export function GameControlBar({ title, showTimer = false, elapsedTime = 0 }: Ga
   const navigate = useNavigate();
   const { status, pauseGame, resumeGame, abandonGame } = useGameStore();
   const [showPauseMenu, setShowPauseMenu] = useState(false);
+  // 标记用户主动退出，防止 blocker 拦截后误触发暂停
+  const intentionalExit = useRef(false);
 
   const isPlaying = status === 'playing';
   const isPaused = status === 'paused';
@@ -30,6 +32,11 @@ export function GameControlBar({ title, showTimer = false, elapsedTime = 0 }: Ga
 
   useEffect(() => {
     if (blocker.state === 'blocked') {
+      if (intentionalExit.current) {
+        intentionalExit.current = false;
+        blocker.proceed?.();
+        return;
+      }
       pauseGame();
       setShowPauseMenu(true);
       blocker.reset();
@@ -47,6 +54,7 @@ export function GameControlBar({ title, showTimer = false, elapsedTime = 0 }: Ga
   };
 
   const handleExit = () => {
+    intentionalExit.current = true;
     setShowPauseMenu(false);
     abandonGame();
     navigate('/');
