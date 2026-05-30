@@ -144,7 +144,7 @@ export function StroopGame({
       </div>
 
       {/* 无障碍说明 */}
-      <p className="text-center text-[10px] text-muted-foreground mt-4">
+      <p className="text-center text-xs text-muted-foreground mt-4">
         不同形状代表不同颜色，帮助色盲用户识别
       </p>
     </div>

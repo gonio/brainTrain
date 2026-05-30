@@ -155,7 +155,7 @@ function Home() {
           <div className="bg-accent/30 p-6 rounded-3xl space-y-8">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-primary/70 uppercase tracking-[0.2em] font-black mb-1">
+                <p className="text-xs text-primary/70 uppercase tracking-[0.2em] font-black mb-1">
                   平均专注度
                 </p>
                 <p className="text-4xl font-headline font-black text-primary">
@@ -169,7 +169,7 @@ function Home() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground font-bold">本周活跃度</p>
-                <span className="text-[10px] text-primary font-bold bg-surface px-2 py-1 rounded-md shadow-sm">
+                <span className="text-xs text-primary font-bold bg-surface px-2 py-1 rounded-md shadow-sm">
                   {streak > 0 ? `连续 ${streak} 天` : '开始训练'}
                 </span>
               </div>
@@ -185,7 +185,7 @@ function Home() {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between text-[9px] uppercase tracking-tighter font-black text-muted-foreground">
+              <div className="flex justify-between text-xs uppercase tracking-tighter font-black text-muted-foreground">
                 {weeklyData.map(day => (
                   <span key={day.day}>{day.day}</span>
                 ))}

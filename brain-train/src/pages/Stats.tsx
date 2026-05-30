@@ -91,7 +91,7 @@ export function Stats() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 rounded-2xl"
         >
-          <div className="text-[10px] uppercase tracking-wider opacity-80 mb-1">总训练次数</div>
+          <div className="text-xs uppercase tracking-wider opacity-80 mb-1">总训练次数</div>
           <div className="text-3xl font-bold font-headline">{stats.overall.totalSessions}</div>
           <div className="text-xs opacity-70 mt-1">次训练</div>
         </motion.div>
@@ -102,7 +102,7 @@ export function Stats() {
           transition={{ delay: 0.1 }}
           className="bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground p-5 rounded-2xl"
         >
-          <div className="text-[10px] uppercase tracking-wider opacity-80 mb-1">今日训练</div>
+          <div className="text-xs uppercase tracking-wider opacity-80 mb-1">今日训练</div>
           <div className="text-3xl font-bold font-headline">
             {todaySessions}
           </div>
@@ -115,7 +115,7 @@ export function Stats() {
           transition={{ delay: 0.2 }}
           className="bg-surface-container p-5 rounded-2xl"
         >
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">平均分数</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">平均分数</div>
           <div className="text-3xl font-bold font-headline text-foreground">
             {Math.round(stats.overall.avgScore)}
           </div>
@@ -128,7 +128,7 @@ export function Stats() {
           transition={{ delay: 0.3 }}
           className="bg-surface-container p-5 rounded-2xl"
         >
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">平均准确率</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">平均准确率</div>
           <div className="text-3xl font-bold font-headline text-foreground">
             {Math.round(stats.overall.avgAccuracy)}%
           </div>
@@ -145,7 +145,7 @@ export function Stats() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-wider opacity-80 mb-1">连续训练</div>
+            <div className="text-xs uppercase tracking-wider opacity-80 mb-1">连续训练</div>
             <div className="text-4xl font-bold font-headline">{streak.current}</div>
             <div className="text-xs opacity-80 mt-1">天连续训练</div>
           </div>
@@ -216,7 +216,7 @@ export function Stats() {
                   <div className="text-lg font-bold font-headline">
                     {Math.round(modeStats.avgScore)}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">平均分</div>
+                  <div className="text-xs text-muted-foreground">平均分</div>
                 </div>
               </motion.div>
             ))}

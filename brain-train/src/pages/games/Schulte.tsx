@@ -135,13 +135,13 @@ export function Schulte() {
         {(isPlaying || isPaused) && (
           <div className="mb-8 flex justify-center gap-12">
             <div className="flex flex-col items-center">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">目标</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">目标</span>
               <span className="text-secondary text-2xl font-bold font-headline">
                 {String(clickSequence.length + 1).padStart(2, '0')}
               </span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">准确率</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">准确率</span>
               <span className="text-foreground text-2xl font-bold font-headline">
                 {clickSequence.length > 0
                   ? Math.round((clickSequence.length / (clickSequence.length + errors)) * 100)
@@ -149,7 +149,7 @@ export function Schulte() {
               </span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">错误</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">错误</span>
               <span className="text-foreground text-2xl font-bold font-headline">{errors}</span>
             </div>
           </div>
