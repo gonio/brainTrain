@@ -159,11 +159,11 @@ export function Sequence() {
           {/* 详细统计 */}
           <div className="mt-6 grid grid-cols-2 gap-4">
             <div className="text-center p-3 bg-accent/50 rounded-xl">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">位置准确率</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">位置准确率</div>
               <div className="text-2xl font-bold font-headline text-primary">{gameResult.positionAccuracy}%</div>
             </div>
             <div className="text-center p-3 bg-accent/50 rounded-xl">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">物品准确率</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">物品准确率</div>
               <div className="text-2xl font-bold font-headline text-primary">{gameResult.itemAccuracy}%</div>
             </div>
           </div>

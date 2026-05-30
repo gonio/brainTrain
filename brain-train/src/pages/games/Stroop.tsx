@@ -122,15 +122,15 @@ export function Stroop() {
       {(isPlaying || isPaused) && (
         <div className="mb-6 grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-accent rounded-xl">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">正确</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">正确</div>
             <div className="text-xl font-bold font-headline">{stats.correctCount}</div>
           </div>
           <div className="text-center p-3 bg-accent rounded-xl">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">准确率</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">准确率</div>
             <div className="text-xl font-bold font-headline">{stats.accuracy}%</div>
           </div>
           <div className="text-center p-3 bg-accent rounded-xl">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">平均反应</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">平均反应</div>
             <div className="text-xl font-bold font-headline">{Math.round(stats.avgReactionTime)}ms</div>
           </div>
         </div>

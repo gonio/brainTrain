@@ -169,7 +169,7 @@ export function Insights() {
                       day.sessions > 0 ? 'bg-primary' : 'bg-accent'
                     }`}
                   />
-                  <div className="text-[10px] text-muted-foreground mt-2">{dayName}</div>
+                  <div className="text-xs text-muted-foreground mt-2">{dayName}</div>
                 </div>
               );
             })}

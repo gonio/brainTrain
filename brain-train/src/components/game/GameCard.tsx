@@ -45,10 +45,10 @@ export function GameCard({
         </div>
         <div className="flex-grow">
           <h3 className="font-headline text-sm font-bold leading-tight mb-1 text-foreground">{title}</h3>
-          <p className="text-[10px] text-muted-foreground font-bold mb-2">{description}</p>
+          <p className="text-xs text-muted-foreground font-bold mb-2">{description}</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-3 py-1.5 rounded-lg">Locked</p>
+          <p className="text-xs font-black text-muted-foreground uppercase tracking-widest bg-muted px-3 py-1.5 rounded-lg">Locked</p>
         </div>
       </div>
     );
@@ -63,12 +63,12 @@ export function GameCard({
         <span className="material-symbols-outlined">{icon}</span>
       </div>
       <h3 className="font-headline text-sm font-bold leading-tight mb-1 text-foreground">{title}</h3>
-      <p className="text-[10px] text-muted-foreground font-bold mb-4">{description}</p>
+      <p className="text-xs text-muted-foreground font-bold mb-4">{description}</p>
       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${Math.max(5, progress)}%` }}></div>
       </div>
       {stat && (
-        <p className="text-[10px] mt-2.5 font-bold text-muted-foreground">
+        <p className="text-xs mt-2.5 font-bold text-muted-foreground">
           {statLabel ? `${statLabel}: ` : ''}
           <span className={barColor.replace('bg-', 'text-')}>{stat}</span>
         </p>
