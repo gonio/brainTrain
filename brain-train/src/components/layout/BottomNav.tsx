@@ -17,30 +17,42 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 w-full z-50 bg-background/95 backdrop-blur-xl border-t border-border transition-all">
-      <div className="max-w-md mx-auto flex justify-around items-center px-4 pb-6 pt-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`
-                flex flex-col items-center justify-center px-4 py-2 rounded-2xl transition-all duration-300
-                ${isActive
-                  ? 'bg-accent text-primary scale-110'
-                  : 'text-muted-foreground hover:text-primary'
-                }
-              `}
-            >
-              <span className={`material-symbols-outlined text-2xl ${isActive ? 'font-bold' : ''}`}>
-                {item.icon}
-              </span>
-              <span className="font-headline text-[10px] uppercase tracking-widest font-bold mt-1">
-                {item.labelZh}
-              </span>
-            </Link>
-          );
-        })}
+      <div className="max-w-md mx-auto flex flex-col w-full">
+        <div className="flex justify-around items-center px-4 pt-2">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`
+                  flex flex-col items-center justify-center px-4 py-2 rounded-2xl transition-all duration-300
+                  ${isActive
+                    ? 'bg-accent text-primary scale-110'
+                    : 'text-muted-foreground hover:text-primary'
+                  }
+                `}
+              >
+                <span className={`material-symbols-outlined text-2xl ${isActive ? 'font-bold' : ''}`}>
+                  {item.icon}
+                </span>
+                <span className="font-headline text-xs uppercase tracking-widest font-bold mt-1">
+                  {item.labelZh}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+        <div className="flex justify-center pb-2 pt-1">
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors font-sans"
+          >
+            粤ICP备2026057219号
+          </a>
+        </div>
       </div>
     </nav>
   );
@@ -84,7 +96,7 @@ export function TopBar() {
               </div>
               {/* 连续训练徽章 */}
               {streak > 0 && (
-                <div className="absolute -bottom-0.5 -right-0.5 bg-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-extrabold shadow-sm flex items-center gap-0.5">
+                <div className="absolute -bottom-0.5 -right-0.5 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-extrabold shadow-sm flex items-center gap-0.5">
                   <span>🔥</span>
                   <span>{streak}</span>
                 </div>
@@ -104,14 +116,14 @@ export function TopBar() {
                     transition={{ duration: 0.5, delay: 0.2 }}
                   />
                 </div>
-                <span className="text-[10px] text-muted-foreground font-medium">
+                <span className="text-xs text-muted-foreground font-medium">
                   {todaySessions}/{dailyGoalSessions}次
                 </span>
                 {isGoalCompleted && (
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="text-[10px]"
+                    className="text-xs"
                     title="今日目标已完成"
                   >
                     ✓

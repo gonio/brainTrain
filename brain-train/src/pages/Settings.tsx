@@ -179,16 +179,6 @@ export function Settings() {
             <div className="text-sm text-muted-foreground">专注力训练应用</div>
             <div className="text-xs text-muted-foreground mt-1">版本 1.0.0</div>
           </div>
-          <div className="border-t border-border pt-3 mt-2 text-center">
-            <a
-              href="https://beian.miit.gov.cn/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-            >
-              粤ICP备2026057219号
-            </a>
-          </div>
         </div>
       </motion.section>
     </div>
