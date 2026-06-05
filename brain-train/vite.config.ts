@@ -42,8 +42,29 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // 新 SW 立即激活，不等待旧标签页关闭
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // 离线深链路回退到 precache 的 index.html
+        navigateFallback: '/index.html',
         runtimeCaching: [
+          {
+            // 入口页面：NetworkFirst 优先网络，确保部署后立即更新
+            urlPattern: ({ sameOrigin, url }: { sameOrigin: boolean; url: URL }) =>
+              sameOrigin && (url.pathname === '/' || url.pathname === '/index.html'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 60 * 24 // 1 天
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
@@ -51,7 +72,7 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 年
               },
               cacheableResponse: {
                 statuses: [0, 200]
