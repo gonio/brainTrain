@@ -133,13 +133,12 @@ export const schulteQuestInstructions: QuestGameplayInstructions = {
 };
 
 // 所有玩法说明配置映射
-// 说明：schulte-quest 的 mode 字面量 'schulte-quest' 不在 TrainingMode 联合中，
-// 这里以类型断言将其并入 map，闯关流程可直接读取 schulteQuestInstructions 获得精确类型；
-// 训练模式消费方（如 GameStartScreen）按 mode: TrainingMode 索引时仍得到 GameplayInstructionsConfig。
+// 仅包含 4 个训练模式（写入 trainingRecords 的）。
+// 舒尔特闯关模式（不入 trainingRecords）独立 export 为 schulteQuestInstructions，
+// 消费者（如 QuestLevelIntro 或闯关 UI）直接 import 使用，不走此 map。
 export const gameplayInstructionsMap: Record<string, GameplayInstructionsConfig> = {
   schulte: schulteInstructions,
   stroop: stroopInstructions,
   sequence: sequenceInstructions,
   bottle: bottleInstructions,
-  'schulte-quest': schulteQuestInstructions as unknown as GameplayInstructionsConfig,
 };
