@@ -1,87 +1,148 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 
 interface SchulteGridProps {
-  order: 'asc' | 'desc';
+  gridSize: 3 | 4 | 5 | 6;
+  order: 'asc' | 'desc' | 'alternate' | 'mixed';
+  expectedSequence?: number[];          // mixed 模式预设序列
+  isActive: boolean;
+  startTime: number;
   onCorrectClick: (number: number, time: number) => void;
   onWrongClick: () => void;
   onComplete?: () => void;
-  isActive: boolean;
-  startTime: number;
+  onComboChange?: (combo: number) => void;
 }
 
-const GRID_SIZE = 5;
+// 计算下一个目标数字的索引序列
+function buildTargetSequence(
+  gridSize: number,
+  order: 'asc' | 'desc' | 'alternate' | 'mixed',
+  expectedSequence?: number[]
+): number[] {
+  const N = gridSize * gridSize;
+  if (order === 'asc') {
+    return Array.from({ length: N }, (_, i) => i + 1);
+  }
+  if (order === 'desc') {
+    return Array.from({ length: N }, (_, i) => N - i);
+  }
+  if (order === 'alternate') {
+    // 1, N, 2, N-1, ...
+    const seq: number[] = [];
+    let lo = 1, hi = N;
+    for (let i = 0; i < N; i++) {
+      if (i % 2 === 0) {
+        seq.push(lo++);
+      } else {
+        seq.push(hi--);
+      }
+    }
+    return seq;
+  }
+  // mixed
+  if (expectedSequence && expectedSequence.length === N) {
+    return [...expectedSequence];
+  }
+  // 兜底（不该到这里）
+  return Array.from({ length: N }, (_, i) => i + 1);
+}
 
 export function SchulteGrid({
+  gridSize,
   order,
+  expectedSequence,
+  isActive,
+  startTime,
   onCorrectClick,
   onWrongClick,
   onComplete,
-  isActive,
-  startTime
+  onComboChange,
 }: SchulteGridProps) {
-  const [clickedNumbers, setClickedNumbers] = useState<Set<number>>(new Set());
+  const [clickedCount, setClickedCount] = useState(0);
+  const [combo, setCombo] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(startTime);
 
-  // Generate shuffled grid
-  const grid = useMemo(() => {
-    const numbers = Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => i + 1);
-    // Fisher-Yates shuffle
-    for (let i = numbers.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
-    }
-    return numbers;
-  }, [startTime]);
+  const N = gridSize * gridSize;
 
-  // Calculate expected next number
-  const expectedNumber = useMemo(() => {
-    if (order === 'asc') {
-      return clickedNumbers.size + 1;
-    } else {
-      return GRID_SIZE * GRID_SIZE - clickedNumbers.size;
+  // 生成乱序网格（仅位置乱序，数字本身按 targetSequence 顺序点）
+  // 使用 startTime 作 seed 进行确定性洗牌（mulberry32），以便闯关模式重试时网格一致
+  const gridNumbers = useMemo(() => {
+    const arr = Array.from({ length: N }, (_, i) => i + 1);
+    const seed = startTime % 4294967296;
+    let s = seed;
+    const rng = () => {
+      s |= 0;
+      s = (s + 0x6d2b79f5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-  }, [clickedNumbers.size, order]);
+    return arr;
+  }, [N, startTime]);
 
-  // Reset when game starts
+  // 计算下一个目标数字
+  const targetSequence = useMemo(
+    () => buildTargetSequence(gridSize, order, expectedSequence),
+    [gridSize, order, expectedSequence]
+  );
+
+  const expectedNumber = targetSequence[clickedCount];
+
+  // 重置：startTime 变化时回到初始
   useEffect(() => {
-    setClickedNumbers(new Set());
+    setClickedCount(0);
+    setCombo(0);
     setLastClickTime(startTime);
-  }, [startTime]);
+    onComboChange?.(0);
+  }, [startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNumberClick = useCallback((number: number) => {
-    if (!isActive || clickedNumbers.has(number)) return;
-
-    const currentTime = Date.now();
-    const clickDuration = (currentTime - lastClickTime) / 1000;
+    if (!isActive) return;
 
     if (number === expectedNumber) {
-      const newClicked = new Set([...clickedNumbers, number]);
-      setClickedNumbers(newClicked);
+      const currentTime = Date.now();
+      const clickDuration = (currentTime - lastClickTime) / 1000;
+      const newClicked = clickedCount + 1;
+      const newCombo = combo + 1;
+      setClickedCount(newClicked);
+      setCombo(newCombo);
       setLastClickTime(currentTime);
       onCorrectClick(number, clickDuration);
+      onComboChange?.(newCombo);
 
-      // 在点击回调中直接检查完成（避免 useEffect 竞态）
-      if (newClicked.size === GRID_SIZE * GRID_SIZE) {
+      if (newClicked === N) {
         onComplete?.();
       }
     } else {
+      setCombo(0);
+      onComboChange?.(0);
       onWrongClick();
     }
-  }, [isActive, clickedNumbers, expectedNumber, lastClickTime, onCorrectClick, onWrongClick, onComplete]);
+  }, [isActive, clickedCount, combo, expectedNumber, lastClickTime, N, onCorrectClick, onWrongClick, onComplete, onComboChange]);
+
+  // 已经点过的数字集合（用于显示已点击状态）
+  const clickedNumbers = useMemo(() => {
+    const set = new Set<number>();
+    for (let i = 0; i < clickedCount; i++) {
+      set.add(targetSequence[i]);
+    }
+    return set;
+  }, [clickedCount, targetSequence]);
 
   return (
     <div className="flex items-center justify-center w-full h-full">
       <div className="relative w-full max-w-md aspect-square bg-surface-container-low rounded-xl p-4 shadow-2xl">
-        {/* Subtle glow background effect */}
+        {/* 背景柔光 */}
         <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full pointer-events-none" />
-
         <div
           className="grid gap-3 h-full w-full relative z-10"
-          style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
+          style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
         >
-          {grid.map((number) => {
+          {gridNumbers.map((number) => {
             const isClicked = clickedNumbers.has(number);
-
             return (
               <button
                 key={number}
@@ -89,13 +150,13 @@ export function SchulteGrid({
                 disabled={!isActive || isClicked}
                 className={`
                   flex items-center justify-center rounded-xl text-xl font-bold
-                  transition-all duration-200 cursor-pointer
-                  active:scale-95
+                  transition-all duration-200 cursor-pointer active:scale-95
                   ${isClicked
                     ? 'bg-muted text-muted-foreground cursor-default'
                     : 'bg-surface-container text-foreground hover:bg-surface-container-high shadow-sm'
                   }
                 `}
+                style={{ fontSize: gridSize >= 6 ? '0.9rem' : undefined }}
               >
                 {number}
               </button>
