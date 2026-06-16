@@ -7,13 +7,14 @@ import { SchulteGrid } from '../../components/game/SchulteGrid';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
 import { GameStartScreen } from '../../components/game/GameStartScreen';
-import type { TrainingDetails } from '../../types';
+import { getQuestProgress, saveQuestProgress, createInitialProgress } from '../../db/queries';
+import type { TrainingDetails, SchulteQuestProgress } from '../../types';
 
 // 固定5x5配置
 const GRID_SIZE = 5;
 const GRID_ORDER = 'asc' as const;
 
-export function Schulte() {
+function SchulteFree({ onExit }: { onExit: () => void }) {
   const { startGame, endGame, status } = useGameStore();
   const { soundEnabled } = useSettingsStore();
   const { playEffect } = useAudio();
@@ -190,7 +191,158 @@ export function Schulte() {
             </div>
           </motion.div>
         )}
+
+        {/* 返回模式选择 - 仅在 idle 且未显示结果时显示 */}
+        {isIdle && !showResult && (
+          <button
+            onClick={onExit}
+            className="mt-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← 返回模式选择
+          </button>
+        )}
       </div>
     </>
+  );
+}
+
+type Mode = 'free' | 'quest' | null;
+
+export function Schulte() {
+  const [mode, setMode] = useState<Mode>(null);
+  const [progress, setProgress] = useState<SchulteQuestProgress | null>(null);
+  const [showEntryDialog, setShowEntryDialog] = useState(false);
+
+  // 挂载时立刻加载进度（入口页副标题需要显示真实状态，而不是 fallback 文案）
+  useEffect(() => {
+    getQuestProgress().then(setProgress);
+  }, []);
+
+  const handleQuestClick = () => {
+    const p = progress ?? createInitialProgress();
+    // 三种入口分支：
+    //   全新玩家（无进度）→ 直接进入第 1 关，不显示弹窗
+    //   其他（有 inProgressLevel、有已通关记录、已全通关）→ 显示弹窗让用户选
+    if (!p.inProgressLevel && p.clearedLevel === 0) {
+      setMode('quest');
+    } else {
+      setShowEntryDialog(true);
+    }
+  };
+
+  // 入口页：mode 选择
+  if (mode === null) {
+    return (
+      <div className="max-w-md mx-auto px-6 pt-8 pb-32">
+        <h1 className="font-headline text-3xl font-extrabold mb-6 text-center">舒尔特表</h1>
+        <div className="space-y-3">
+          <button
+            onClick={() => setMode('free')}
+            className="w-full p-5 bg-surface rounded-2xl editorial-shadow hover:bg-accent transition-all text-left"
+          >
+            <div className="font-bold text-base mb-1">自由练习</div>
+            <div className="text-xs text-muted-foreground">5×5 网格 · 无压力</div>
+          </button>
+          <button
+            onClick={handleQuestClick}
+            className="w-full p-5 bg-surface rounded-2xl editorial-shadow hover:bg-accent transition-all text-left"
+          >
+            <div className="font-bold text-base mb-1">闯关模式</div>
+            <div className="text-xs text-muted-foreground">
+              {progress && (progress.clearedLevel > 0 || progress.inProgressLevel)
+                ? `进度：第 ${progress.inProgressLevel ?? progress.clearedLevel + 1} 关 · ⭐ ${progress.totalStars}/30`
+                : '10 关挑战 · 连击 + 星级'}
+            </div>
+          </button>
+        </div>
+
+        {showEntryDialog && progress && (
+          <EntryDialog
+            progress={progress}
+            onContinue={() => {
+              setShowEntryDialog(false);
+              setMode('quest');
+            }}
+            onRestart={async () => {
+              const updated: SchulteQuestProgress = {
+                ...progress,
+                inProgressLevel: 1,
+              };
+              await saveQuestProgress(updated);
+              setProgress(updated);
+              setShowEntryDialog(false);
+              setMode('quest');
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (mode === 'free') {
+    return <SchulteFree onExit={() => setMode(null)} />;
+  }
+
+  return <SchulteQuest initialProgress={progress} onExit={() => setMode(null)} />;
+}
+
+function EntryDialog({
+  progress,
+  onContinue,
+  onRestart,
+}: {
+  progress: SchulteQuestProgress;
+  onContinue: () => void;
+  onRestart: () => void;
+}) {
+  const isCompleted = progress.clearedLevel === 10 && !progress.inProgressLevel;
+  const continueLevel = progress.inProgressLevel ?? progress.clearedLevel + 1;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        {isCompleted ? (
+          <>
+            <h3 className="text-center text-xl font-extrabold mb-2">🏆 全部通关</h3>
+            <p className="text-center text-sm text-muted-foreground mb-4">
+              已通关全部 10 关 · ⭐ {progress.totalStars}/30
+            </p>
+          </>
+        ) : (
+          <>
+            <h3 className="text-center text-xl font-extrabold mb-2">继续闯关</h3>
+            <p className="text-center text-sm text-muted-foreground mb-4">
+              当前进度：第 {continueLevel} 关 · ⭐ {progress.totalStars}/30
+            </p>
+          </>
+        )}
+        <div className="flex gap-3">
+          {!isCompleted && (
+            <button
+              onClick={onContinue}
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold"
+            >
+              继续闯关
+            </button>
+          )}
+          <button
+            onClick={onRestart}
+            className="flex-1 py-3 bg-accent text-foreground rounded-xl font-bold"
+          >
+            {isCompleted ? '重新挑战' : '重新闯关'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 占位：Task 11 替换为完整状态机实现
+function SchulteQuest({ onExit }: { initialProgress: SchulteQuestProgress | null; onExit: () => void }) {
+  return (
+    <div className="max-w-md mx-auto px-6 pt-8 pb-32 text-center">
+      <p className="text-muted-foreground">闯关模式即将上线</p>
+      <button onClick={onExit} className="mt-4 text-sm text-primary">← 返回</button>
+    </div>
   );
 }
