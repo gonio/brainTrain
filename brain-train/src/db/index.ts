@@ -1,10 +1,11 @@
 import Dexie, { type Table } from 'dexie';
-import type { UserProfile, TrainingRecord, DailyGoal } from '../types';
+import type { UserProfile, TrainingRecord, DailyGoal, SchulteQuestProgress } from '../types';
 
 export class BrainTrainDB extends Dexie {
   userProfile!: Table<UserProfile>;
   trainingRecords!: Table<TrainingRecord>;
   dailyGoals!: Table<DailyGoal>;
+  schulteQuestProgress!: Table<SchulteQuestProgress>;
 
   constructor() {
     super('BrainTrainDB');
@@ -22,6 +23,14 @@ export class BrainTrainDB extends Dexie {
     }).upgrade((tx) => {
       tx.table('trainingRecords').clear();
       tx.table('dailyGoals').clear();
+    });
+
+    // v3: 新增舒尔特闯关进度表（singleton 主键模式，使用 put 而非 add）
+    this.version(3).stores({
+      userProfile: 'id',
+      trainingRecords: 'id, mode, startedAt, [mode+startedAt]',
+      dailyGoals: 'date',
+      schulteQuestProgress: 'id',
     });
   }
 }
