@@ -1,5 +1,6 @@
 import { db } from './index';
 import type { UserProfile, TrainingRecord, DailyGoal, TrainingMode, Statistics, SchulteQuestProgress } from '../types';
+import { normalizeSchulteDetails } from '../lib/normalizeDetails';
 
 const defaultUserProfile: UserProfile = {
   id: 'default',
@@ -65,20 +66,39 @@ export async function getTrainingRecords(
       .between(options.startDate, options.endDate);
   }
 
-  return query.reverse().limit(options?.limit || 100).toArray();
+  return query.reverse().limit(options?.limit || 100).toArray().then((records) =>
+    // 旧 schulte 记录兜底补 mode/maxCombo
+    records.map((r) =>
+      r.mode === 'schulte'
+        ? { ...r, details: normalizeSchulteDetails(r.details) }
+        : r
+    )
+  );
 }
 
 export async function getTrainingRecordById(id: string): Promise<TrainingRecord | undefined> {
-  return db.trainingRecords.get(id);
+  const r = await db.trainingRecords.get(id);
+  if (!r) return undefined;
+  // 旧 schulte 记录兜底补 mode/maxCombo
+  return r.mode === 'schulte'
+    ? { ...r, details: normalizeSchulteDetails(r.details) }
+    : r;
 }
 
 // 获取今日训练记录
 export async function getTodayTrainingRecords(): Promise<TrainingRecord[]> {
   const today = new Date().toISOString().split('T')[0];
-  return db.trainingRecords
+  const records = await db.trainingRecords
     .where('startedAt')
     .startsWith(today)
     .toArray();
+
+  // 旧 schulte 记录兜底补 mode/maxCombo
+  return records.map((r) =>
+    r.mode === 'schulte'
+      ? { ...r, details: normalizeSchulteDetails(r.details) }
+      : r
+  );
 }
 
 // Daily Goals
@@ -92,7 +112,14 @@ export async function updateDailyGoal(goal: DailyGoal): Promise<void> {
 
 // Statistics
 export async function computeStatistics(): Promise<Statistics> {
-  const records = await db.trainingRecords.toArray();
+  // 注意：不走 getTrainingRecords() 以避免 100 条限制；就地包装 normalize
+  const rawRecords = await db.trainingRecords.toArray();
+  // 旧 schulte 记录兜底补 mode/maxCombo
+  const records = rawRecords.map((r) =>
+    r.mode === 'schulte'
+      ? { ...r, details: normalizeSchulteDetails(r.details) }
+      : r
+  );
 
   const overall = {
     totalSessions: records.length,
