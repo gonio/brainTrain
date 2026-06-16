@@ -220,10 +220,12 @@ export function Schulte() {
   const [progress, setProgress] = useState<SchulteQuestProgress | null>(null);
   const [showEntryDialog, setShowEntryDialog] = useState(false);
 
-  // 挂载时立刻加载进度（入口页副标题需要显示真实状态，而不是 fallback 文案）
+  // 入口页（mode === null）挂载或重入时刷新进度
+  // 避免从 quest/free 退出回入口时副标题仍显示旧值
   useEffect(() => {
+    if (mode !== null) return;
     getQuestProgress().then(setProgress);
-  }, []);
+  }, [mode]);
 
   const handleQuestClick = () => {
     const p = progress ?? createInitialProgress();
