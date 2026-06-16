@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -7,6 +7,13 @@ import { SchulteGrid } from '../../components/game/SchulteGrid';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
 import { GameStartScreen } from '../../components/game/GameStartScreen';
+import { QuestLevelIntro, QuestHUD, QuestResultDialog } from '../../components/game';
+import {
+  getLevelConfig,
+  computeStars,
+  computeScore,
+  generateMixedSequence,
+} from '../../lib/schulteQuestConfig';
 import { getQuestProgress, saveQuestProgress, createInitialProgress } from '../../db/queries';
 import type { TrainingDetails, SchulteQuestProgress } from '../../types';
 
@@ -337,12 +344,274 @@ function EntryDialog({
   );
 }
 
-// 占位：Task 11 替换为完整状态机实现
-function SchulteQuest({ onExit }: { initialProgress: SchulteQuestProgress | null; onExit: () => void }) {
+type QuestPhase = 'intro' | 'playing' | 'pass' | 'fail' | 'completed';
+
+interface SchulteQuestProps {
+  initialProgress: SchulteQuestProgress | null;
+  onExit: () => void;
+}
+
+function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
+  // 当前关卡（继续时从 inProgressLevel，否则从 clearedLevel+1，再否则 1）
+  const startLevel = initialProgress?.inProgressLevel
+    ?? (initialProgress && initialProgress.clearedLevel < 10
+        ? initialProgress.clearedLevel + 1
+        : 1);
+  const [currentLevel, setCurrentLevel] = useState(startLevel);
+
+  const [phase, setPhase] = useState<QuestPhase>('intro');
+  const [progress, setProgress] = useState<SchulteQuestProgress>(
+    initialProgress ?? createInitialProgress()
+  );
+
+  // 游戏运行时状态
+  const [gameStartTime, setGameStartTime] = useState(0);
+  const [errors, setErrors] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+  const [correctClickCount, setCorrectClickCount] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [remainingTime, setRemainingTime] = useState<number | undefined>(undefined);
+  const [lastResult, setLastResult] = useState<{
+    stars: 0 | 1 | 2 | 3;
+    score: number;
+    completionTime: number;
+    progressText?: string;
+  } | null>(null);
+
+  // refs：保存本次 playing 阶段最新值，供 timer/wrong-click 等 effect 读取，避免 stale closure
+  const failGuardRef = useRef(false);  // 防止 fail 被多次触发
+
+  const config = getLevelConfig(currentLevel);
+  if (!config) return null;
+
+  const totalTime = config.timeLimitPerNumber
+    ? config.timeLimitPerNumber * config.gridSize * config.gridSize
+    : undefined;
+  const N = config.gridSize * config.gridSize;
+
+  // 失败处理：先定义，所有 effect/handler 都引用它
+  const handleFail = useCallback(() => {
+    if (failGuardRef.current) return;
+    failGuardRef.current = true;
+
+    const completionTime = gameStartTime > 0 ? (Date.now() - gameStartTime) / 1000 : 0;
+    const progressText = `${Math.min(correctClickCount, N)}/${N}`;
+    setLastResult({
+      stars: 0,
+      score: 0,
+      completionTime,
+      progressText,
+    });
+    setPhase('fail');
+  }, [gameStartTime, correctClickCount, N]);
+
+  // 通关处理：依赖当前所有计分输入
+  const handleComplete = useCallback(() => {
+    if (failGuardRef.current) return;
+
+    const completionTime = (Date.now() - gameStartTime) / 1000;
+    const stars = computeStars({
+      passed: true,
+      maxCombo,
+      errorCount: errors,
+      comboTarget: config.comboTarget,
+    });
+    const score = computeScore({
+      level: currentLevel,
+      timeLimitPerNumber: config.timeLimitPerNumber,
+      gridSize: config.gridSize,
+      maxCombo,
+      remainingTime: remainingTime ?? 0,
+    });
+
+    // 更新进度（取最高星数）
+    const oldStars = progress.levelRecords[currentLevel]?.stars ?? 0;
+    const newRecords = { ...progress.levelRecords };
+    if (stars > oldStars) {
+      newRecords[currentLevel] = {
+        stars,
+        bestScore: Math.max(score, progress.levelRecords[currentLevel]?.bestScore ?? 0),
+        bestCombo: Math.max(maxCombo, progress.levelRecords[currentLevel]?.bestCombo ?? 0),
+        bestTime: Math.min(completionTime, progress.levelRecords[currentLevel]?.bestTime ?? Infinity),
+      };
+    }
+    const newClearedLevel = Math.max(progress.clearedLevel, currentLevel);
+    const newTotalStars = progress.totalStars + (stars - oldStars);
+    const isLast = currentLevel === 10;
+
+    const updated: SchulteQuestProgress = {
+      ...progress,
+      clearedLevel: newClearedLevel,
+      totalStars: newTotalStars,
+      levelRecords: newRecords,
+      inProgressLevel: isLast ? undefined : currentLevel + 1,
+    };
+    setProgress(updated);
+    saveQuestProgress(updated);
+
+    setLastResult({ stars, score, completionTime });
+    setPhase(isLast ? 'completed' : 'pass');
+  }, [gameStartTime, maxCombo, errors, config, currentLevel, remainingTime, progress]);
+
+  // 进入关卡 intro 时持久化 inProgressLevel
+  useEffect(() => {
+    if (phase !== 'intro') return;
+    failGuardRef.current = false;  // 每关重置 guard
+    const updated: SchulteQuestProgress = {
+      ...progress,
+      inProgressLevel: currentLevel,
+    };
+    setProgress(updated);
+    saveQuestProgress(updated);
+  }, [phase, currentLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 计时器：仅 playing + 有时限时启用；remainingTime <= 0 时切到 fail
+  useEffect(() => {
+    if (phase !== 'playing' || !config.timeLimitPerNumber || remainingTime === undefined) return;
+
+    if (remainingTime <= 0) {
+      handleFail();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setRemainingTime((prev) => (prev !== undefined ? Math.max(0, prev - 0.1) : prev));
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [phase, remainingTime, config.timeLimitPerNumber, handleFail]);
+
+  const handleStart = () => {
+    setGameStartTime(Date.now());
+    setErrors(0);
+    setCombo(0);
+    setMaxCombo(0);
+    setCorrectClickCount(0);
+    setLives(config.lives);
+    setRemainingTime(totalTime);
+    failGuardRef.current = false;
+    setPhase('playing');
+  };
+
+  const handleWrongClick = () => {
+    if (failGuardRef.current) return;
+    setErrors((prev) => prev + 1);
+    const newLives = lives - 1;
+    setLives(newLives);
+    if (newLives <= 0) {
+      handleFail();
+    }
+  };
+
+  const handleComboChange = (newCombo: number) => {
+    setCombo(newCombo);
+    setMaxCombo((prev) => Math.max(prev, newCombo));
+  };
+
+  const handleCorrectClick = () => {
+    setCorrectClickCount((prev) => prev + 1);
+  };
+
+  const handleNext = () => {
+    setCurrentLevel((prev) => Math.min(10, prev + 1));
+    setLastResult(null);
+    setPhase('intro');
+  };
+
+  const handleRetry = () => {
+    setLastResult(null);
+    setPhase('intro');
+  };
+
+  // 全通关总用时（秒）：累加各关 bestTime
+  const totalClearedTime = Object.values(progress.levelRecords).reduce(
+    (sum, rec) => sum + (rec?.bestTime ?? 0),
+    0
+  );
+
   return (
-    <div className="max-w-md mx-auto px-6 pt-8 pb-32 text-center">
-      <p className="text-muted-foreground">闯关模式即将上线</p>
-      <button onClick={onExit} className="mt-4 text-sm text-primary">← 返回</button>
+    <div className="max-w-md mx-auto px-4 pt-4 pb-32">
+      {/* 轻量 header（不使用 GameControlBar） */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={onExit}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <span className="text-lg">←</span>
+          <span>退出</span>
+        </button>
+        <span className="font-headline text-base font-extrabold">
+          舒尔特闯关 · 第 {currentLevel} 关
+        </span>
+        <span className="w-12" />
+      </div>
+
+      {phase === 'intro' && (
+        <QuestLevelIntro level={currentLevel} onStart={handleStart} />
+      )}
+
+      {phase === 'playing' && (
+        <>
+          <QuestHUD
+            level={currentLevel}
+            direction={config.direction}
+            lives={lives}
+            combo={combo}
+            remainingTime={remainingTime}
+            totalTime={totalTime}
+          />
+          <SchulteGrid
+            gridSize={config.gridSize}
+            order={config.direction}
+            expectedSequence={
+              config.direction === 'mixed'
+                ? generateMixedSequence(config.gridSize, gameStartTime)
+                : undefined
+            }
+            isActive={true}
+            startTime={gameStartTime}
+            onCorrectClick={handleCorrectClick}
+            onWrongClick={handleWrongClick}
+            onComplete={handleComplete}
+            onComboChange={handleComboChange}
+          />
+        </>
+      )}
+
+      {phase === 'pass' && lastResult && (
+        <QuestResultDialog
+          type="pass"
+          level={currentLevel}
+          stars={lastResult.stars}
+          score={lastResult.score}
+          maxCombo={maxCombo}
+          completionTime={lastResult.completionTime}
+          isLastLevel={false}
+          onNext={handleNext}
+          onRetry={handleRetry}
+        />
+      )}
+
+      {phase === 'fail' && lastResult && (
+        <QuestResultDialog
+          type="fail"
+          level={currentLevel}
+          maxCombo={maxCombo}
+          progressText={lastResult.progressText ?? ''}
+          onRetry={handleRetry}
+          onExit={onExit}
+        />
+      )}
+
+      {phase === 'completed' && (
+        <QuestResultDialog
+          type="completed"
+          totalStars={progress.totalStars}
+          totalTime={totalClearedTime}
+          onRestart={handleRetry}
+        />
+      )}
     </div>
   );
 }
