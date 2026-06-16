@@ -98,7 +98,40 @@ BrainTrain 当前提供 4 个独立训练游戏：舒尔特表、字色干扰、
 - **正向（asc）**：从 1 点击到 N（N = gridSize²）
 - **反向（desc）**：从 N 点击到 1
 - **正反交替（alternate）**：1 → N → 2 → N-1 → 3 → N-2 → ...
-- **混合（mixed）**：基于 `startTime` 作为确定性随机种子生成的固定排列（保证一局内顺序稳定）
+- **混合（mixed）**：基于 `startTime` 作为确定性随机种子生成的固定排列
+
+**`mixed` 序列生成算法（必须明确）：**
+
+```typescript
+// src/lib/schulteQuestConfig.ts
+function mulberry32(seed: number) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+export function generateMixedSequence(gridSize: number, startTime: number): number[] {
+  const N = gridSize * gridSize;
+  const seed = startTime % 4294967296;       // 32-bit seed
+  const rng = mulberry32(seed);
+  const arr = Array.from({ length: N }, (_, i) => i + 1);
+  // Fisher-Yates shuffle with seeded rng
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;                                // length N, unique 1..N
+}
+```
+
+**关键属性：**
+
+- 同一 `startTime` 总是生成相同序列（同一局内稳定）
+- 不同 `startTime` 生成不同序列（玩家重玩时换新序列）
+- 实现简单、可测试
 
 **目标数字提示（所有方向变体通用）：**
 
@@ -130,11 +163,13 @@ BrainTrain 当前提供 4 个独立训练游戏：舒尔特表、字色干扰、
 
 ### 4.4 星级评价（每关最高 3 星）
 
-三个条件**独立判定**，达成几个就拿几颗星：
+三个条件**独立累加**，每达成一个加 1 星，最高封顶 3 星：
 
-- ⭐ **通关**：完成本关
-- ⭐ **连击**：通关 + 最高 combo ≥ 本关 `comboTarget`
-- ⭐ **完美**：通关 + 零错误（errorCount = 0）
+| 条件 | 加星 |
+|------|------|
+| 完成本关（通关） | +1 星（保底） |
+| 最高 combo ≥ 本关 `comboTarget` | +1 星 |
+| 全程零错误（errorCount = 0） | +1 星 |
 
 **判定算法**（伪代码）：
 
@@ -144,16 +179,21 @@ function computeStars(passed, maxCombo, errorCount, comboTarget): 0|1|2|3 {
   let stars = 1;                              // 通关保底 1 星
   if (maxCombo >= comboTarget) stars++;       // 连击 +1
   if (errorCount === 0) stars++;              // 完美 +1
-  return stars;
+  return stars;                               // 0-3
 }
 ```
 
+**注意：星数是数值（0/1/2/3），不绑定到具体的"第 N 颗星含义"。** UI 视觉上按数量填充（1 颗亮黄星 + 2 颗暗星），而不是按"通关星 / 连击星 / 完美星"分槽位。
+
 **举例**：
 
-- 通关 + combo 18（达标）+ 0 错误 → 3 星
-- 通关 + combo 5（不达标）+ 0 错误 → 2 星（通关 + 完美）
-- 通关 + combo 20（达标）+ 3 错误 → 2 星（通关 + 连击）
-- 通关 + combo 5 + 3 错误 → 1 星
+| 通关 | combo 达标 | 零错误 | 星数 |
+|------|------------|--------|------|
+| ✅ | ✅ | ✅ | 3 |
+| ✅ | ✅ | ❌ | 2 |
+| ✅ | ❌ | ✅ | 2 |
+| ✅ | ❌ | ❌ | 1 |
+| ❌ | — | — | 0 |
 
 **累积规则：**
 
@@ -161,6 +201,7 @@ function computeStars(passed, maxCombo, errorCount, comboTarget): 0|1|2|3 {
 - `totalStars` 算法：`sum over levels of historical_max_stars[level]`
 - 重玩获得更高星数时：`totalStars += newStars - oldStars`（差额累加）
 - 重玩获得相同或更低星数时：`totalStars` 不变
+- "重新闯关" / "重新挑战" **不清空星数**（保留历史最佳）
 
 ### 4.5 评分公式
 
@@ -191,14 +232,18 @@ Combo 倍率 = 本关最高 combo 对应的倍率（≥ 1.0，永不 < 1）
 |----------|----------|----------|
 | `trainingRecords` 表 | ✅ 写入（score 0-100） | ❌ 不写入 |
 | `schulteQuestProgress.levelRecords[N]` | ❌ 不写入 | ✅ 写入（bestScore 原始值得） |
-| `dailyGoals.completedSessions` | ✅ 算一次训练 | ✅ 算一次训练（按通关关数计） |
-| `userProfile.totalSessions` | ✅ +1 | ✅ +1（仅通关时） |
+| `dailyGoals.completedSessions` | ✅ +1 / 次 | ✅ +1 / 次（整局结束算 1 次，不管通关几关） |
+| `userProfile.totalSessions` | ✅ +1 / 次 | ✅ +1 / 次（与 dailyGoals 一致） |
+| `userProfile.totalTrainingTime` | ✅ 累加用时 | ✅ 累加用时 |
+| `Statistics.overall.totalSessions`（来自 `computeStatistics`） | ✅ 计入 | ⚠️ **不计入**（已知差异） |
 
-**理由：**
+**"一次训练"的定义：**
 
-- 闯关得分可能高达数千（如第 10 关满 combo 可达 6000+），混入 `trainingRecords` 会污染"平均分"统计
-- 闯关模式的"训练量"按通关关数计更合理（打 5 关 ≈ 5 次自由训练）
-- 自由模式仍然写入 `trainingRecords`，保证现有洞察/统计页面不受影响
+- **自由模式**：每次开始 → 完成 = 1 次训练
+- **闯关模式**：进入第 1 关 → 失败/通关第 10 关/退出 = 1 次训练（不管中间通过几关）
+- 闯关模式中"通关第 N 关" **不**算独立一次训练，避免与自由模式的概念混淆
+
+**已知差异：** `computeStatistics()`（src/db/queries.ts:94-105 附近）基于 `trainingRecords` 表计算，由于闯关模式不写入该表，**闯关训练不会出现在统计页**。这是有意为之的隔离，避免污染 0-100 分制数据。如果未来需要在统计页展示闯关数据，应该单独加一个 `computeQuestStatistics()` 函数，而不是修改现有 `computeStatistics`。
 
 ## 5. 用户流程
 
@@ -257,7 +302,8 @@ N+1 > 10 → 全通关庆典页
 | 第 N 关失败，玩家点"重试本关"时 | `inProgressLevel` 不变（仍是 N） |
 | 第 N 关失败，玩家点"退出"时 | `inProgressLevel` 不变（仍是 N） |
 | 玩家手动暂停并退出时 | `inProgressLevel` 不变（仍是 N） |
-| 玩家主动选择"重新闯关"时 | `inProgressLevel = 1`，`clearedLevel` 不变 |
+| 玩家主动选择"重新闯关"时 | `inProgressLevel = 1`，`clearedLevel` 不变，`levelRecords` 保留 |
+| 全通关后选"重新挑战"时 | 与"重新闯关"相同：`inProgressLevel = 1`，`clearedLevel` 不变（保留全部通关状态），`levelRecords` 保留所有星数 |
 | 第 10 关通关时 | `inProgressLevel = undefined`，`clearedLevel = 10` |
 
 **关键决策：** `inProgressLevel` 在关卡规则说明卡显示时立即持久化，**不**等到游戏开始后。这保证即使应用在游戏过程中崩溃/被杀，下次"继续闯关"也能回到正确的关。
@@ -272,11 +318,27 @@ N+1 > 10 → 全通关庆典页
 - 玩家从未玩过闯关模式（首次进入）
 - 玩家已全部通关（clearedLevel === 10）
 
-入口弹窗逻辑：
+入口弹窗逻辑（统一基于 `inProgressLevel`）：
 
-- `inProgressLevel === undefined && clearedLevel === 0` → 直接进入第 1 关（不显示弹窗）
-- `inProgressLevel === undefined && clearedLevel === 10` → 显示"全部通关"弹窗，提供"重新挑战"
-- 其他情况 → 显示"继续闯关（第 inProgressLevel 关）"/"重新闯关"弹窗
+```typescript
+function getEntryView(progress: SchulteQuestProgress | null): EntryView {
+  if (!progress || (!progress.inProgressLevel && progress.clearedLevel === 0)) {
+    return { type: 'FRESH_START' };                 // 直接进入第 1 关
+  }
+  if (progress.clearedLevel === 10 && !progress.inProgressLevel) {
+    return { type: 'COMPLETED', totalStars: progress.totalStars };
+    // 显示"全部通关"弹窗，按钮："重新挑战"
+  }
+  return {
+    type: 'CONTINUE_OR_RESTART',
+    inProgressLevel: progress.inProgressLevel!,
+    clearedLevel: progress.clearedLevel,
+    totalStars: progress.totalStars,
+  };
+}
+```
+
+**关键判断：** 弹窗类型由 `inProgressLevel + clearedLevel` 联合决定，不依赖单独字段。
 
 ### 5.4 "重新闯关"的语义
 
@@ -308,11 +370,10 @@ export interface SchulteDetails {
 
 **TypeScript 兼容性策略：**
 
-由于 `mode` 是必填字段，旧数据读取时需要类型守卫：
+由于 `mode` 是必填字段，旧数据读取时需要类型守卫。新建 `src/lib/normalizeDetails.ts`：
 
 ```typescript
-// db/queries.ts 或 lib/utils.ts
-function normalizeSchulteDetails(raw: any): SchulteDetails {
+export function normalizeSchulteDetails(raw: any): SchulteDetails {
   if (raw.mode) return raw;
   return {
     ...raw,
@@ -322,12 +383,23 @@ function normalizeSchulteDetails(raw: any): SchulteDetails {
 }
 ```
 
+**必须包装的读取点（所有从数据库读取 SchulteDetails 的地方）：**
+
+| 文件 | 函数 | 改动 |
+|------|------|------|
+| `src/db/queries.ts` | `getTrainingRecords` | 在 `filter(r => r.mode === 'schulte')` 后 map 包装 |
+| `src/db/queries.ts` | `getTrainingRecordById` | 返回前包装 |
+| `src/db/queries.ts` | `getTodayTrainingRecords` | 同上 |
+| `src/db/queries.ts` | `computeStatistics` | 在累加 schulte 记录前包装 |
+| `src/pages/Stats.tsx` | 渲染时 | 通过 queries 已包装，无需重复 |
+| `src/pages/Insights.tsx` | 同上 | 无需重复 |
+
 **`SchulteDetails` 内部模式分支：**
 
 - `mode: 'free'`：仅 `gridSize` / `order` / `completionTime` / `errorCount` / `clickSequence` / `maxCombo`（始终为 0）有值
 - `mode: 'quest'`：所有字段可能有值
 
-类型层不强制约束（保持单一 interface），运行时通过 `mode` 字段判断。
+类型层不强制约束（保持单一 interface + 运行时判断），避免侵入式重构 `TrainingDetails` 联合类型。
 
 ### 6.2 新增类型
 
@@ -537,20 +609,29 @@ export function SchulteGrid({
   gridSize,                         // 新增：3 | 4 | 5 | 6（替代模块级 GRID_SIZE）
   order,                            // 扩展：'asc' | 'desc' | 'alternate' | 'mixed'
   expectedSequence?,                // 新增：mixed 模式预设序列
-  timeLimitPerNumber?,              // 新增：每数字时限（秒），undefined = 无时限
-  lives,                            // 新增：当前命数
   onCorrectClick,
   onWrongClick,
-  onComboChange?,                   // 新增：combo 变化回调
-  onLifeLost?,                      // 新增：扣命回调
-  onTimeExpired?,                   // 新增：超时回调
+  onComboChange?,                   // 新增：combo 变化回调（参数：当前 combo 数）
   onComplete,
   isActive,
   startTime
 }: SchulteGridProps)
 ```
 
-**向后兼容：** 自由模式调用时，`gridSize = 5` `order = 'asc'` `lives = 1`，其他可选回调传入空函数即可。
+**职责分工（重要）：**
+
+| 关注点 | 负责方 | 说明 |
+|--------|--------|------|
+| 网格渲染 + 点击检测 | `SchulteGrid` 内部 | 接收 `gridSize` / `order` / `expectedSequence` |
+| Combo 计数 | `SchulteGrid` 内部 | 连续正确点击累加，错误清零；通过 `onComboChange` 通知父组件 |
+| 命数管理 | **父组件**（`Schulte.tsx` 或新的 QuestGamePage） | 通过 `onWrongClick` 接收错误通知，自己扣命 |
+| 时间管理 | **父组件** | 父组件持有计时器，超时设 `isActive=false` |
+| 失败判定（lives === 0 或 超时） | **父组件** | 父组件渲染失败弹窗 |
+| 成功判定（点击完所有数字） | `SchulteGrid` 内部 | 通过 `onComplete` 通知父组件 |
+
+**网格内部不知道命数 / 时限的概念**，只负责"点击检测 + combo 计算"。这样 `SchulteGrid` 保持单一职责，闯关逻辑集中在父组件。
+
+**向后兼容：** 自由模式调用时，`gridSize = 5` `order = 'asc'`，其他可选回调传入空函数或不传。父组件忽略 combo 信息即可。
 
 ## 9. 验证标准
 
