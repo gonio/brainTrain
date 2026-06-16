@@ -430,7 +430,8 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     const newRecords = { ...progress.levelRecords };
     if (stars > oldStars) {
       newRecords[currentLevel] = {
-        stars,
+        // 此分支 stars > oldStars ≥ 0，必为 1|2|3
+        stars: stars as 1 | 2 | 3,
         bestScore: Math.max(score, progress.levelRecords[currentLevel]?.bestScore ?? 0),
         bestCombo: Math.max(maxCombo, progress.levelRecords[currentLevel]?.bestCombo ?? 0),
         bestTime: Math.min(completionTime, progress.levelRecords[currentLevel]?.bestTime ?? Infinity),
