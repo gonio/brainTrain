@@ -8,3 +8,4 @@ export { BottleGame } from './BottleGame';
 export { GameInstructionsDialog } from './GameInstructions';
 export { QuestLevelIntro } from './QuestLevelIntro';
 export { QuestHUD } from './QuestHUD';
+export { QuestResultDialog } from './QuestResultDialog';
