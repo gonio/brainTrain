@@ -98,7 +98,17 @@ BrainTrain 当前提供 4 个独立训练游戏：舒尔特表、字色干扰、
 - **正向（asc）**：从 1 点击到 N（N = gridSize²）
 - **反向（desc）**：从 N 点击到 1
 - **正反交替（alternate）**：1 → N → 2 → N-1 → 3 → N-2 → ...
-- **混合（mixed）**：系统随机生成一个排列顺序，开局展示给玩家
+- **混合（mixed）**：基于 `startTime` 作为确定性随机种子生成的固定排列（保证一局内顺序稳定）
+
+**目标数字提示（所有方向变体通用）：**
+
+参考现有 `Schulte.tsx` 第 138-142 行的"目标"指标，所有方向变体都显示**下一个目标数字**：
+
+- `asc` / `desc`：玩家无需记忆，看提示即可
+- `alternate`：每次点击后，"目标"指标更新为下一个交替数字（如点了 1 后显示 N，点了 N 后显示 2）
+- `mixed`：关卡开始前 3 秒展示完整序列（数字依次高亮），之后只显示"下一个目标"
+
+这避免玩家被"记序列"的认知负担压垮，把训练核心保持在"视觉搜索"上。
 
 ### 4.3 Combo 连击系统
 
@@ -120,11 +130,37 @@ BrainTrain 当前提供 4 个独立训练游戏：舒尔特表、字色干扰、
 
 ### 4.4 星级评价（每关最高 3 星）
 
-- ⭐ **通关**：完成本关
-- ⭐⭐ **连击**：通关 + 最高 combo ≥ 本关 `comboTarget`
-- ⭐⭐⭐ **完美**：通关 + 零错误（errorCount = 0）
+三个条件**独立判定**，达成几个就拿几颗星：
 
-**累积规则：** 每关保留**历史最高星数**（重玩不降级），累加到 `totalStars`。
+- ⭐ **通关**：完成本关
+- ⭐ **连击**：通关 + 最高 combo ≥ 本关 `comboTarget`
+- ⭐ **完美**：通关 + 零错误（errorCount = 0）
+
+**判定算法**（伪代码）：
+
+```typescript
+function computeStars(passed, maxCombo, errorCount, comboTarget): 0|1|2|3 {
+  if (!passed) return 0;
+  let stars = 1;                              // 通关保底 1 星
+  if (maxCombo >= comboTarget) stars++;       // 连击 +1
+  if (errorCount === 0) stars++;              // 完美 +1
+  return stars;
+}
+```
+
+**举例**：
+
+- 通关 + combo 18（达标）+ 0 错误 → 3 星
+- 通关 + combo 5（不达标）+ 0 错误 → 2 星（通关 + 完美）
+- 通关 + combo 20（达标）+ 3 错误 → 2 星（通关 + 连击）
+- 通关 + combo 5 + 3 错误 → 1 星
+
+**累积规则：**
+
+- 每关保留**历史最高星数**（重玩不降级）
+- `totalStars` 算法：`sum over levels of historical_max_stars[level]`
+- 重玩获得更高星数时：`totalStars += newStars - oldStars`（差额累加）
+- 重玩获得相同或更低星数时：`totalStars` 不变
 
 ### 4.5 评分公式
 
@@ -132,15 +168,37 @@ BrainTrain 当前提供 4 个独立训练游戏：舒尔特表、字色干扰、
 本关得分 = (基础分 + 时间奖励) × Combo 倍率
 
 基础分 = 100 × 关卡序号           // 第 1 关 100，第 10 关 1000
-时间奖励 = 剩余秒数 × 5           // 仅有时限关卡
-Combo 倍率 = 本关最高 combo 对应的倍率
+时间奖励 = 剩余秒数 × 5           // 仅有时限关卡，无时限关卡此项为 0
+Combo 倍率 = 本关最高 combo 对应的倍率（≥ 1.0，永不 < 1）
 ```
+
+**边界情况：**
+
+- 玩家未通关（命数耗尽或超时）：**不调用评分公式**，本局无得分，`levelRecords[N]` 不更新
+- 玩家通关但 maxCombo = 0（理论上不可能，至少点击第 1 个正确数字就 combo ≥ 1）：倍率按 ×1.0 兜底
 
 **示例：** 第 5 关（5×5 反向，5s/数字，3 命，combo 目标 18）
 - 基础分 = 100 × 5 = 500
 - 假设剩余 10 秒 → 时间奖励 = 50
 - 假设最高 combo = 18 → 倍率 ×2.0
 - **本关得分 = (500 + 50) × 2.0 = 1100**
+
+### 4.6 闯关得分与现有 0-100 分制的关系
+
+**关键决策：闯关模式不写入 `trainingRecords`，避免破坏现有 0-100 分制统计。**
+
+| 数据去向 | 自由模式 | 闯关模式 |
+|----------|----------|----------|
+| `trainingRecords` 表 | ✅ 写入（score 0-100） | ❌ 不写入 |
+| `schulteQuestProgress.levelRecords[N]` | ❌ 不写入 | ✅ 写入（bestScore 原始值得） |
+| `dailyGoals.completedSessions` | ✅ 算一次训练 | ✅ 算一次训练（按通关关数计） |
+| `userProfile.totalSessions` | ✅ +1 | ✅ +1（仅通关时） |
+
+**理由：**
+
+- 闯关得分可能高达数千（如第 10 关满 combo 可达 6000+），混入 `trainingRecords` 会污染"平均分"统计
+- 闯关模式的"训练量"按通关关数计更合理（打 5 关 ≈ 5 次自由训练）
+- 自由模式仍然写入 `trainingRecords`，保证现有洞察/统计页面不受影响
 
 ## 5. 用户流程
 
@@ -188,11 +246,37 @@ N+1 > 10 → 全通关庆典页
 [手动暂停退出] → 保存 inProgressLevel = N → 回入口
 ```
 
-### 5.3 "继续闯关"的语义
+### 5.3 "继续闯关"的语义与 inProgressLevel 持久化时机
 
-- 玩家中途退出（暂停） → 当前关的游戏状态（点击位置、剩余时间）**不保留**
-- 但 `inProgressLevel = N` 写入数据库，表示"曾进行到第 N 关"
-- 下次"继续闯关" → 进入第 N 关的**规则说明卡**，从该关重新开始
+**`inProgressLevel` 写入时机（必须明确）：**
+
+| 时机 | 操作 |
+|------|------|
+| 进入第 N 关的**规则说明卡**时 | 立即写入 `inProgressLevel = N`（不等玩家点"开始"） |
+| 第 N 关通关，进入第 N+1 关规则说明卡时 | 写入 `inProgressLevel = N+1`，同时 `clearedLevel = max(clearedLevel, N)` |
+| 第 N 关失败，玩家点"重试本关"时 | `inProgressLevel` 不变（仍是 N） |
+| 第 N 关失败，玩家点"退出"时 | `inProgressLevel` 不变（仍是 N） |
+| 玩家手动暂停并退出时 | `inProgressLevel` 不变（仍是 N） |
+| 玩家主动选择"重新闯关"时 | `inProgressLevel = 1`，`clearedLevel` 不变 |
+| 第 10 关通关时 | `inProgressLevel = undefined`，`clearedLevel = 10` |
+
+**关键决策：** `inProgressLevel` 在关卡规则说明卡显示时立即持久化，**不**等到游戏开始后。这保证即使应用在游戏过程中崩溃/被杀，下次"继续闯关"也能回到正确的关。
+
+**游戏状态不持久化：**
+
+- 玩家在第 N 关游戏中点击了 5 个数字后退出 → 这 5 次点击的进度**不保留**
+- 下次"继续闯关" → 重新看规则说明卡 → 重新开始第 N 关
+
+**`inProgressLevel === undefined` 的场景：**
+
+- 玩家从未玩过闯关模式（首次进入）
+- 玩家已全部通关（clearedLevel === 10）
+
+入口弹窗逻辑：
+
+- `inProgressLevel === undefined && clearedLevel === 0` → 直接进入第 1 关（不显示弹窗）
+- `inProgressLevel === undefined && clearedLevel === 10` → 显示"全部通关"弹窗，提供"重新挑战"
+- 其他情况 → 显示"继续闯关（第 inProgressLevel 关）"/"重新闯关"弹窗
 
 ### 5.4 "重新闯关"的语义
 
@@ -204,10 +288,12 @@ N+1 > 10 → 全通关庆典页
 
 ### 6.1 扩展 `SchulteDetails`（types/index.ts）
 
+`SchulteDetails` 当前是 `TrainingDetails` 联合类型的一员（types/index.ts:77），扩展时把 `mode` 设为**可辨识联合标签**：
+
 ```typescript
 export interface SchulteDetails {
-  mode: 'quest' | 'free';            // 新增：区分模式
-  level?: number;                    // 新增：闯关模式有
+  mode: 'quest' | 'free';            // 必填，作为 discriminated tag
+  level?: number;                    // 闯关模式有
   gridSize: 3 | 4 | 5 | 6;           // 扩展：加入 6
   order: 'asc' | 'desc' | 'alternate' | 'mixed';  // 扩展
   completionTime: number;
@@ -220,7 +306,28 @@ export interface SchulteDetails {
 }
 ```
 
-**向后兼容：** 旧的 `schulte` 训练记录没有 `mode` 字段，读取时按 `mode: 'free'` 兜底。
+**TypeScript 兼容性策略：**
+
+由于 `mode` 是必填字段，旧数据读取时需要类型守卫：
+
+```typescript
+// db/queries.ts 或 lib/utils.ts
+function normalizeSchulteDetails(raw: any): SchulteDetails {
+  if (raw.mode) return raw;
+  return {
+    ...raw,
+    mode: 'free' as const,
+    maxCombo: 0,                     // 旧数据无 combo 信息
+  };
+}
+```
+
+**`SchulteDetails` 内部模式分支：**
+
+- `mode: 'free'`：仅 `gridSize` / `order` / `completionTime` / `errorCount` / `clickSequence` / `maxCombo`（始终为 0）有值
+- `mode: 'quest'`：所有字段可能有值
+
+类型层不强制约束（保持单一 interface），运行时通过 `mode` 字段判断。
 
 ### 6.2 新增类型
 
@@ -251,21 +358,41 @@ export interface SchulteQuestProgress {
 
 ### 6.3 Dexie 数据库扩展
 
-新增表 `schulteQuestProgress`：
+新增表 `schulteQuestProgress`。文件位置：`src/db/index.ts`（当前 v2，新增 v3）。
 
 ```typescript
-// db/schema.ts
-dbSchema.version(N+1).stores({
-  userProfile: 'id',
-  trainingRecords: 'id, mode, startedAt',
-  dailyGoals: 'date',
-  schulteQuestProgress: 'id',  // 单条记录，id 固定为 'singleton'
-});
+// src/db/index.ts
+import type { SchulteQuestProgress } from '../types';
+
+export class BrainTrainDB extends Dexie {
+  userProfile!: Table<UserProfile>;
+  trainingRecords!: Table<TrainingRecord>;
+  dailyGoals!: Table<DailyGoal>;
+  schulteQuestProgress!: Table<SchulteQuestProgress>;  // 新增
+
+  constructor() {
+    super('BrainTrainDB');
+    this.version(1).stores({ /* ... */ });
+    this.version(2).stores({ /* ... */ }).upgrade(/* ... */);
+
+    // v3: 新增舒尔特闯关进度表
+    this.version(3).stores({
+      userProfile: 'id',
+      trainingRecords: 'id, mode, startedAt, [mode+startedAt]',
+      dailyGoals: 'date',
+      schulteQuestProgress: 'id',     // 单条记录，id 固定为 'singleton'
+    });
+  }
+}
 ```
 
-- 现有 3 张表 schema 不变
-- `trainingRecords` 中 `schulte` 记录多出 `mode` 字段（运行时字段，schema 不需要改）
-- 旧数据兼容：读取时若 `mode` 字段缺失，按 `'free'` 兜底
+**关键说明：**
+
+- **当前版本是 v2**（src/db/index.ts:18），新增必须是 v3
+- 现有 3 张表的索引 schema **保持不变**
+- `trainingRecords` 表 schema 不需要改：`mode` 字段是 `TrainingDetails` 内部的子字段（运行时数据），不是顶层索引
+- `schulteQuestProgress` 表只有 1 条记录（id = `'singleton'`），用 `put` 而非 `add`
+- 无需 `upgrade()` 回调：新表无历史数据需要迁移
 
 ## 7. UI/UX 设计
 
@@ -376,17 +503,54 @@ dbSchema.version(N+1).stores({
 
 | 文件 | 改动类型 | 改动内容 |
 |------|----------|----------|
-| `src/types/index.ts` | 修改 | 扩展 `SchulteDetails`，新增 `SchulteQuestLevelConfig` / `SchulteQuestProgress` |
-| `src/db/schema.ts` | 修改 | Dexie 加 `schulteQuestProgress` 表 |
-| `src/db/queries.ts` | 修改 | 加 `getQuestProgress` / `saveQuestProgress` |
-| `src/pages/games/Schulte.tsx` | 重构 | mode 选择（自由/闯关）+ 闯关路由 |
-| `src/components/game/SchulteGrid.tsx` | 扩展 | 加 `onComboChange` / `onLifeLost` / `timerExpired` 钩子（自由模式默认值兼容） |
+| `src/types/index.ts` | 修改 | 扩展 `SchulteDetails`（加 `mode` discriminated tag），新增 `SchulteQuestLevelConfig` / `SchulteQuestProgress` |
+| `src/db/index.ts` | 修改 | 新增 v3 schema，加 `schulteQuestProgress` 表（注意：当前文件叫 `index.ts` 不是 `schema.ts`） |
+| `src/db/queries.ts` | 修改 | 加 `getQuestProgress` / `saveQuestProgress` / `normalizeSchulteDetails`（旧数据兜底） |
+| `src/pages/games/Schulte.tsx` | 重构 | mode 选择（自由/闯关）+ 闯关路由（当前文件硬编码 `GRID_SIZE=5` `GRID_ORDER='asc'`，第 13-14 行，需要参数化） |
+| `src/components/game/SchulteGrid.tsx` | **重大重构** | 当前文件第 12 行 `GRID_SIZE = 5` 是模块级常量，需要改为接受 `gridSize` 和 `order` props；加 `onComboChange` / `onLifeLost` / `onTimeExpired` 钩子（自由模式默认值兼容） |
 | `src/components/game/QuestLevelIntro.tsx` | **新建** | 关卡规则说明卡 |
 | `src/components/game/QuestHUD.tsx` | **新建** | 闯关模式顶部 HUD（关卡/时限/命数/combo） |
 | `src/components/game/QuestResultDialog.tsx` | **新建** | 通关 / 失败 / 全通关弹窗 |
-| `src/lib/schulteQuestConfig.ts` | **新建** | 10 关配置常量 + 倍率表 |
+| `src/lib/schulteQuestConfig.ts` | **新建** | 10 关配置常量 + 倍率表 + `computeStars` / `computeScore` 工具函数 |
 | `src/lib/gameplayInstructions.ts` | 修改 | 加入闯关模式说明 |
 | `src/components/game/index.ts` | 修改 | 导出新组件 |
+
+**`SchulteGrid` 重构的具体改动（重要）：**
+
+当前签名（src/components/game/SchulteGrid.tsx:14）：
+
+```typescript
+export function SchulteGrid({
+  order,                            // 'asc' | 'desc'
+  onCorrectClick,
+  onWrongClick,
+  onComplete,
+  isActive,
+  startTime
+}: SchulteGridProps)
+```
+
+目标签名：
+
+```typescript
+export function SchulteGrid({
+  gridSize,                         // 新增：3 | 4 | 5 | 6（替代模块级 GRID_SIZE）
+  order,                            // 扩展：'asc' | 'desc' | 'alternate' | 'mixed'
+  expectedSequence?,                // 新增：mixed 模式预设序列
+  timeLimitPerNumber?,              // 新增：每数字时限（秒），undefined = 无时限
+  lives,                            // 新增：当前命数
+  onCorrectClick,
+  onWrongClick,
+  onComboChange?,                   // 新增：combo 变化回调
+  onLifeLost?,                      // 新增：扣命回调
+  onTimeExpired?,                   // 新增：超时回调
+  onComplete,
+  isActive,
+  startTime
+}: SchulteGridProps)
+```
+
+**向后兼容：** 自由模式调用时，`gridSize = 5` `order = 'asc'` `lives = 1`，其他可选回调传入空函数即可。
 
 ## 9. 验证标准
 
@@ -445,8 +609,11 @@ dbSchema.version(N+1).stores({
 | Combo 清零太狠，挫败感重 | 早期关卡（1-4）无时限、3 命，给玩家学习空间 |
 | 6×6 网格在小屏（手机）上字太小 | 使用响应式字号，必要时缩放整个网格容器 |
 | 失败重试当前关可能导致卡关 | 玩家随时可"退出" → "重新闯关"从第 1 关开始 |
-| 旧训练记录兼容性 | `mode` 字段读取时按 `free` 兜底，无需迁移 |
-| 关卡 10 "混合方向"实现复杂 | 用确定性的随机种子（startTime），保证一局内顺序稳定 |
+| 旧训练记录兼容性 | `mode` 字段读取时按 `free` 兜底，无需迁移；详细策略见 §6.1 |
+| 关卡 10 "混合方向"实现复杂 | 用 `startTime` 作为确定性随机种子，关卡开始前 3 秒高亮展示完整序列 |
+| `SchulteGrid` 重构影响自由模式 | 重构后自由模式调用方式参数化（gridSize=5, order='asc'），保证现有 Schulte.tsx 不破坏 |
+| 闯关得分污染现有 0-100 分制统计 | 闯关模式不写入 `trainingRecords`，只入 `schulteQuestProgress`（见 §4.6） |
+| 应用崩溃丢失关卡进度 | 进入规则说明卡时立即写 `inProgressLevel`（见 §5.3） |
 
 ---
 
