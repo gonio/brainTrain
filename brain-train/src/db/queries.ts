@@ -1,5 +1,5 @@
 import { db } from './index';
-import type { UserProfile, TrainingRecord, DailyGoal, TrainingMode, Statistics } from '../types';
+import type { UserProfile, TrainingRecord, DailyGoal, TrainingMode, Statistics, SchulteQuestProgress } from '../types';
 
 const defaultUserProfile: UserProfile = {
   id: 'default',
@@ -144,4 +144,27 @@ export async function computeStatistics(): Promise<Statistics> {
   }
 
   return { overall, byMode, trend };
+}
+
+// SchulteQuestProgress：舒尔特闯关模式持久化（单条记录，put 而非 add）
+
+// 创建初始进度（无任何通关记录时使用）
+export function createInitialProgress(): SchulteQuestProgress {
+  return {
+    id: 'singleton',
+    clearedLevel: 0,
+    totalStars: 0,
+    levelRecords: {},
+  };
+}
+
+// 读取闯关进度；不存在时返回初始进度
+export async function getQuestProgress(): Promise<SchulteQuestProgress> {
+  const record = await db.schulteQuestProgress.get('singleton');
+  return record ?? createInitialProgress();
+}
+
+// 保存闯关进度（同主键 put = upsert）
+export async function saveQuestProgress(progress: SchulteQuestProgress): Promise<void> {
+  await db.schulteQuestProgress.put(progress);
 }
