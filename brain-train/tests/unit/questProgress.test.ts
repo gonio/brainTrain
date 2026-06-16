@@ -4,6 +4,7 @@ import {
   getQuestProgress,
   saveQuestProgress,
   createInitialProgress,
+  getTrainingRecords,
 } from '../../src/db/queries';
 
 beforeEach(async () => {
@@ -49,5 +50,36 @@ describe('SchulteQuestProgress 持久化', () => {
     });
     const all = await db.schulteQuestProgress.toArray();
     expect(all).toHaveLength(1);
+  });
+});
+
+describe('读取旧 schulte 训练记录时自动兜底', () => {
+  it('旧记录被 normalize 后有 mode 和 maxCombo', async () => {
+    // 模拟旧数据：直接写入无 mode 字段的记录
+    const legacyRecord: any = {
+      id: 'legacy-1',
+      mode: 'schulte',
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      duration: 30,
+      score: 85,
+      accuracy: 100,
+      details: {
+        gridSize: 5,
+        order: 'asc',
+        completionTime: 30,
+        errorCount: 0,
+        clickSequence: [],
+        // 故意省略 mode 和 maxCombo
+      },
+    };
+    await db.trainingRecords.put(legacyRecord);
+
+    const records = await getTrainingRecords();
+    const schulteRecords = records.filter(r => r.mode === 'schulte');
+    expect(schulteRecords).toHaveLength(1);
+    const details = schulteRecords[0].details as any;
+    expect(details.mode).toBe('free');
+    expect(details.maxCombo).toBe(0);
   });
 });
