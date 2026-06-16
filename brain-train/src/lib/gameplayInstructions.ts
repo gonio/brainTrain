@@ -1,5 +1,5 @@
 // 玩法说明配置类型
-type TrainingMode = 'schulte' | 'stroop' | 'sequence';
+type TrainingMode = 'schulte' | 'stroop' | 'sequence' | 'bottle';
 
 export interface GameplayInstructionsConfig {
   mode: TrainingMode;
@@ -76,10 +76,70 @@ export const sequenceInstructions: GameplayInstructionsConfig = {
   hardModeNote: '可选择不同难度（5/7/10个物品）。必须记住顺序，无提示。',
 };
 
+// 暗瓶排列玩法说明
+export const bottleInstructions: GameplayInstructionsConfig = {
+  mode: 'bottle',
+  title: '暗瓶排列',
+  description: '隐藏推理训练 - 培养逻辑推理和排除法思维能力',
+  objective: '通过交换上排瓶子的位置，使上排与隐藏的下排完全匹配，训练逻辑推理能力。',
+  howToPlay: [
+    '屏幕上有两排瓶子，上排可见，下排隐藏（看不到颜色）',
+    '两排瓶子的颜色集合相同，但排列顺序被随机打乱',
+    '点击选中两个上排瓶子即可交换它们的位置（也支持拖拽交换）',
+    '每次交换后，系统显示当前上排与下排匹配的瓶子数量',
+    '当所有位置都匹配时，游戏胜利！',
+  ],
+  scoringRules: [
+    '满分 100 分',
+    '步数占 70%：越接近最优步数得分越高',
+    '速度占 30%：用时越短得分越高',
+    '无步数上限，可以自由尝试',
+  ],
+  hardModeNote: '9 个瓶子，颜色更多，推理难度更大。',
+};
+
+// 舒尔特闯关模式说明
+// 与 GameplayInstructionsConfig 形状相同，但 mode 字面量不在 TrainingMode 联合中（闯关不入 trainingRecords）
+export interface QuestGameplayInstructions {
+  mode: 'schulte-quest';
+  title: string;
+  description: string;
+  objective: string;
+  howToPlay: string[];
+  scoringRules: string[];
+  hardModeNote: string;
+}
+
+export const schulteQuestInstructions: QuestGameplayInstructions = {
+  mode: 'schulte-quest',
+  title: '舒尔特闯关',
+  description: 'Roguelike 风格的舒尔特表挑战 - 10 关递进，combo 加成，星级评价',
+  objective: '通过 10 个难度递增的关卡，每关达成星级目标（通关 / combo / 零错误）。',
+  howToPlay: [
+    '点击舒尔特卡片上的"闯关模式"按钮',
+    '选择"继续闯关"或"重新闯关"',
+    '查看本关规则说明卡（网格、方向、时限、命数、星级目标）',
+    '点击"开始"进入游戏',
+    '按规则点击数字，连续正确获得 combo 倍率',
+    '通关后自动进入下一关；失败可重试当前关',
+  ],
+  scoringRules: [
+    '基础分 = 100 × 关卡序号',
+    '时间奖励 = 剩余秒数 × 5（仅有时限关卡）',
+    'combo 倍率：5+ → ×1.5，10+ → ×2.0，20+ → ×3.0，50+ → ×5.0',
+    '星级：通关 1 星，combo 达标 +1 星，零错误 +1 星',
+  ],
+  hardModeNote: '第 9-10 关为一击死亡（1 命）+ 6×6 网格 + 3s/数字 + mixed 方向。',
+};
+
 // 所有玩法说明配置映射
-export const gameplayInstructionsMap: Record<string, GameplayInstructionsConfig> =
-  {
-    schulte: schulteInstructions,
-    stroop: stroopInstructions,
-    sequence: sequenceInstructions,
-  };
+// 说明：schulte-quest 的 mode 字面量 'schulte-quest' 不在 TrainingMode 联合中，
+// 这里以类型断言将其并入 map，闯关流程可直接读取 schulteQuestInstructions 获得精确类型；
+// 训练模式消费方（如 GameStartScreen）按 mode: TrainingMode 索引时仍得到 GameplayInstructionsConfig。
+export const gameplayInstructionsMap: Record<string, GameplayInstructionsConfig> = {
+  schulte: schulteInstructions,
+  stroop: stroopInstructions,
+  sequence: sequenceInstructions,
+  bottle: bottleInstructions,
+  'schulte-quest': schulteQuestInstructions as unknown as GameplayInstructionsConfig,
+};
