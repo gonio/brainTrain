@@ -78,11 +78,13 @@ export function Schulte() {
     const accuracy = Math.round(((maxNumber - errors) / maxNumber) * 100);
 
     const details: TrainingDetails = {
+      mode: 'free' as const,
       gridSize: GRID_SIZE,
       order: GRID_ORDER,
       completionTime: totalTime,
       errorCount: errors,
-      clickSequence
+      clickSequence,
+      maxCombo: 0,
     };
 
     endGame({
@@ -122,6 +124,7 @@ export function Schulte() {
         {/* Game Grid - 占据剩余空间 */}
         <div className="flex-1 flex flex-col justify-start py-4">
           <SchulteGrid
+            gridSize={GRID_SIZE}
             order={GRID_ORDER}
             onCorrectClick={handleCorrectClick}
             onWrongClick={handleWrongClick}
