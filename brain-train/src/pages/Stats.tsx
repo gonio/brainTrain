@@ -10,6 +10,7 @@ const modeNames: Record<TrainingMode, string> = {
   schulte: '舒尔特表',
   stroop: '字色干扰',
   sequence: '序列记忆',
+  bottle: '暗瓶排列',
 };
 
 // 训练模式图标
@@ -17,6 +18,7 @@ const modeIcons: Record<TrainingMode, string> = {
   schulte: '🔢',
   stroop: '🎨',
   sequence: '🧠',
+  bottle: '🍾',
 };
 
 export function Stats() {

@@ -422,25 +422,31 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     const score = computeScore({
       level: currentLevel,
       timeLimitPerNumber: config.timeLimitPerNumber,
-      gridSize: config.gridSize,
       maxCombo,
       remainingTime: remainingTime ?? 0,
     });
 
-    // 更新进度（取最高星数）
-    const oldStars = progress.levelRecords[currentLevel]?.stars ?? 0;
-    const newRecords = { ...progress.levelRecords };
-    if (stars > oldStars) {
-      newRecords[currentLevel] = {
-        // 此分支 stars > oldStars ≥ 0，必为 1|2|3
-        stars: stars as 1 | 2 | 3,
-        bestScore: Math.max(score, progress.levelRecords[currentLevel]?.bestScore ?? 0),
-        bestCombo: Math.max(maxCombo, progress.levelRecords[currentLevel]?.bestCombo ?? 0),
-        bestTime: Math.min(completionTime, progress.levelRecords[currentLevel]?.bestTime ?? Infinity),
-      };
-    }
+    // 更新进度：
+    //   - stars 取历史最高（保留更高记录）
+    //   - bestScore / bestCombo / bestTime 始终取更优（与星数提升解耦）
+    //   - totalStars = sum(levelRecords[*].stars)，避免 (stars - oldStars) 为负
+    const oldRecord = progress.levelRecords[currentLevel];
+    const oldStars = oldRecord?.stars ?? 0;
+    const bestStars = Math.max(oldStars, stars) as 1 | 2 | 3;
+    const newRecords: typeof progress.levelRecords = {
+      ...progress.levelRecords,
+      [currentLevel]: {
+        stars: bestStars,
+        bestScore: Math.max(score, oldRecord?.bestScore ?? 0),
+        bestCombo: Math.max(maxCombo, oldRecord?.bestCombo ?? 0),
+        bestTime: Math.min(completionTime, oldRecord?.bestTime ?? Infinity),
+      },
+    };
     const newClearedLevel = Math.max(progress.clearedLevel, currentLevel);
-    const newTotalStars = progress.totalStars + (stars - oldStars);
+    const newTotalStars = Object.values(newRecords).reduce(
+      (sum, rec) => sum + (rec?.stars ?? 0),
+      0,
+    );
     const isLast = currentLevel === 10;
 
     const updated: SchulteQuestProgress = {
@@ -523,6 +529,13 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   };
 
   const handleRetry = () => {
+    setLastResult(null);
+    setPhase('intro');
+  };
+
+  // 全通关"重新挑战"：回到第 1 关（与入口"重新闯关"语义一致）
+  const handleRestartFromStart = () => {
+    setCurrentLevel(1);
     setLastResult(null);
     setPhase('intro');
   };
@@ -612,7 +625,7 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
           type="completed"
           totalStars={progress.totalStars}
           totalTime={totalClearedTime}
-          onRestart={handleRetry}
+          onRestart={handleRestartFromStart}
         />
       )}
     </div>
