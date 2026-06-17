@@ -51,11 +51,10 @@ export function computeStars(args: {
 export function computeScore(args: {
   level: number;
   timeLimitPerNumber?: number;
-  gridSize: number;
   maxCombo: number;
   remainingTime: number;
 }): number {
-  const { level, timeLimitPerNumber, gridSize, maxCombo, remainingTime } = args;
+  const { level, timeLimitPerNumber, maxCombo, remainingTime } = args;
   const baseScore = 100 * level;
   const timeBonus = timeLimitPerNumber ? remainingTime * 5 : 0;
   const multiplier = computeComboMultiplier(maxCombo);

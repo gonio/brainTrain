@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QuestLevelIntro } from '../../src/components/game/QuestLevelIntro';
-import { SCHULTE_QUEST_LEVELS } from '../../src/lib/schulteQuestConfig';
 
 describe('QuestLevelIntro', () => {
   it('显示关卡号', () => {

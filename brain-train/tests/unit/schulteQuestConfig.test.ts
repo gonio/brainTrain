@@ -88,7 +88,6 @@ describe('computeScore', () => {
     const score = computeScore({
       level: 5,
       timeLimitPerNumber: 5,
-      gridSize: 5,
       maxCombo: 18,
       remainingTime: 10,
     });
@@ -99,7 +98,6 @@ describe('computeScore', () => {
     const score = computeScore({
       level: 1,
       timeLimitPerNumber: undefined,
-      gridSize: 3,
       maxCombo: 8,
       remainingTime: 0,
     });
@@ -111,7 +109,6 @@ describe('computeScore', () => {
     const score = computeScore({
       level: 1,
       timeLimitPerNumber: undefined,
-      gridSize: 3,
       maxCombo: 0,
       remainingTime: 0,
     });

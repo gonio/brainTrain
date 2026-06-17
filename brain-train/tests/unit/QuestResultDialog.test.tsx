@@ -6,7 +6,7 @@ describe('QuestResultDialog - 通关弹窗', () => {
   const passingProps = {
     type: 'pass' as const,
     level: 5,
-    stars: 2,
+    stars: 2 as 0 | 1 | 2 | 3,
     score: 1100,
     maxCombo: 18,
     completionTime: 47,
