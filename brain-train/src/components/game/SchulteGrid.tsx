@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { seededShuffle } from '../../lib/rng';
 
 interface SchulteGridProps {
   gridSize: 3 | 4 | 5 | 6;
@@ -68,19 +69,7 @@ export function SchulteGrid({
   const gridNumbers = useMemo(() => {
     const arr = Array.from({ length: N }, (_, i) => i + 1);
     const seed = startTime % 4294967296;
-    let s = seed;
-    const rng = () => {
-      s |= 0;
-      s = (s + 0x6d2b79f5) | 0;
-      let t = Math.imul(s ^ (s >>> 15), 1 | s);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+    return seededShuffle(arr, seed);
   }, [N, startTime]);
 
   // 计算下一个目标数字

@@ -131,7 +131,7 @@ export async function computeStatistics(): Promise<Statistics> {
       : 0
   };
 
-  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence'];
+  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence', 'bottle'];
   const byMode: Statistics['byMode'] = {} as Statistics['byMode'];
 
   for (const mode of modes) {

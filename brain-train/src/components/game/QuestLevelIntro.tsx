@@ -11,7 +11,7 @@ const DIRECTION_LABELS: Record<string, string> = {
   asc: '正向',
   desc: '反向',
   alternate: '正反交替',
-  mixed: '混合（开局展示）',
+  mixed: '混合',
 };
 
 export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
