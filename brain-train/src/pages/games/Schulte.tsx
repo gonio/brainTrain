@@ -227,14 +227,17 @@ export function Schulte() {
     getQuestProgress().then(setProgress);
   }, [mode]);
 
-  const handleQuestClick = () => {
-    const p = progress ?? createInitialProgress();
+  const handleQuestClick = async () => {
+    // 异步读取 DB 进度，避免在 progress 仍为 null 时用 createInitialProgress 兜底
+    // 导致已有进度的玩家被误判为新玩家
+    const p = progress ?? (await getQuestProgress());
     // 三种入口分支：
     //   全新玩家（无进度）→ 直接进入第 1 关，不显示弹窗
     //   其他（有 inProgressLevel、有已通关记录、已全通关）→ 显示弹窗让用户选
     if (!p.inProgressLevel && p.clearedLevel === 0) {
       setMode('quest');
     } else {
+      setProgress(p);
       setShowEntryDialog(true);
     }
   };
@@ -506,11 +509,14 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   const handleWrongClick = () => {
     if (failGuardRef.current) return;
     setErrors((prev) => prev + 1);
-    const newLives = lives - 1;
-    setLives(newLives);
-    if (newLives <= 0) {
-      handleFail();
-    }
+    // 用函数式更新避免闭包 lives 陈旧值，连续错点也能每次扣 1 命
+    setLives((prevLives) => {
+      const next = prevLives - 1;
+      if (next <= 0) {
+        handleFail();
+      }
+      return Math.max(0, next);
+    });
   };
 
   const handleComboChange = (newCombo: number) => {
