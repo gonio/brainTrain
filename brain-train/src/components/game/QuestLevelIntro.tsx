@@ -6,10 +6,10 @@ interface QuestLevelIntroProps {
   onStart: () => void;
 }
 
-// 方向标签映射
+// 方向标签映射（不含具体数字，数字由调用处动态拼接）
 const DIRECTION_LABELS: Record<string, string> = {
-  asc: '正向（1→N）',
-  desc: '反向（N→1）',
+  asc: '正向',
+  desc: '反向',
   alternate: '正反交替',
   mixed: '混合（开局展示）',
 };
@@ -43,6 +43,7 @@ export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
           <span className="text-muted-foreground">方向</span>
           <span className="font-bold">
             {DIRECTION_LABELS[config.direction]}
+            {config.direction === 'asc' && `（1→${N}）`}
             {config.direction === 'desc' && `（${N}→1）`}
           </span>
         </div>
