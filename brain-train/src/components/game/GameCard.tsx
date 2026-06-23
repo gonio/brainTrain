@@ -16,12 +16,14 @@ const modeIcons: Record<TrainingMode, { icon: string; color: string }> = {
   schulte: { icon: 'grid_on', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' },
   stroop: { icon: 'palette', color: 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' },
   sequence: { icon: 'reorder', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' },
+  bottle: { icon: 'science', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100' },
 };
 
 const modeColors: Record<TrainingMode, string> = {
   schulte: 'bg-indigo-600',
   stroop: 'bg-cyan-600',
   sequence: 'bg-indigo-600',
+  bottle: 'bg-amber-600',
 };
 
 export function GameCard({

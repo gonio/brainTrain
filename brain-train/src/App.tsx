@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import { Schulte } from './pages/games/Schulte';
 import { Stroop } from './pages/games/Stroop';
 import { Sequence } from './pages/games/Sequence';
+import { Bottle } from './pages/games/Bottle';
 import { ErrorBoundary } from './components/error-boundary/ErrorBoundary';
 import { Onboarding } from './components/onboarding/Onboarding';
 import { getGreeting } from './lib/greeting';
@@ -41,6 +42,12 @@ const games: {
     mode: 'sequence',
     title: '序列记忆',
     description: '工作记忆训练',
+    priority: 'P2',
+  },
+  {
+    mode: 'bottle',
+    title: '暗瓶排列',
+    description: '隐藏推理训练',
     priority: 'P2',
   },
 ];
@@ -274,6 +281,7 @@ export const router = createBrowserRouter([
       { path: 'games/schulte', element: <Schulte /> },
       { path: 'games/stroop', element: <Stroop /> },
       { path: 'games/sequence', element: <Sequence /> },
+      { path: 'games/bottle', element: <Bottle /> },
       { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
     ]
   }
