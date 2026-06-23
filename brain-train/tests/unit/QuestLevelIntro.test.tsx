@@ -51,9 +51,15 @@ describe('QuestLevelIntro', () => {
     expect(screen.getByText(/零错误|完美/)).toBeInTheDocument();
   });
 
-  it('交替关显示具体点击规则示例（1 → N → 2 …）', () => {
-    // 第 6 关 direction=alternate, 5×5=25，序列前 5 步：1 → 25 → 2 → 24 → 3
+  it('交替关显示玩法说明（看方向、随机段长）', () => {
+    // 第 6 关 direction=alternate（重排后为 3×3 交替入门）
     render(<QuestLevelIntro level={6} onStart={() => {}} />);
-    expect(screen.getByText(/1\s*→\s*25\s*→\s*2/)).toBeInTheDocument();
+    expect(screen.getByText(/看\s*HUD/)).toBeInTheDocument();
+    expect(screen.getByText(/随机翻转方向/)).toBeInTheDocument();
+  });
+
+  it('交替入门关重排后为 3×3', () => {
+    render(<QuestLevelIntro level={6} onStart={() => {}} />);
+    expect(screen.getByText(/3×3/)).toBeInTheDocument();
   });
 });

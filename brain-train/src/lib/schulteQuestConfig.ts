@@ -1,17 +1,18 @@
 import type { SchulteQuestLevelConfig } from '../types';
-import { seededShuffle } from './rng';
+import { seededShuffle, mulberry32 } from './rng';
 
-// 10 关配置（spec §4.1）
+// 10 关配置
+// 交替关（6/7/8）从 3×3→4×4→5×5 渐进：小格起步，玩家先熟悉「看方向、随机段长翻转」的新玩法
 export const SCHULTE_QUEST_LEVELS: readonly SchulteQuestLevelConfig[] = [
   { level: 1,  gridSize: 3, direction: 'asc',                            lives: 3, comboTarget: 8 },
   { level: 2,  gridSize: 4, direction: 'asc',                            lives: 3, comboTarget: 10 },
   { level: 3,  gridSize: 4, direction: 'desc',                           lives: 3, comboTarget: 12 },
   { level: 4,  gridSize: 5, direction: 'asc',                            lives: 3, comboTarget: 15 },
   { level: 5,  gridSize: 5, direction: 'desc',       timeLimitPerNumber: 5, lives: 3, comboTarget: 18 },
-  { level: 6,  gridSize: 5, direction: 'alternate',  timeLimitPerNumber: 5, lives: 3, comboTarget: 20 },
-  { level: 7,  gridSize: 5, direction: 'alternate',  timeLimitPerNumber: 4, lives: 2, comboTarget: 22 },
-  { level: 8,  gridSize: 6, direction: 'asc',        timeLimitPerNumber: 4, lives: 2, comboTarget: 25 },
-  { level: 9,  gridSize: 6, direction: 'desc',       timeLimitPerNumber: 3, lives: 1, comboTarget: 28 },
+  { level: 6,  gridSize: 3, direction: 'alternate',  timeLimitPerNumber: 6, lives: 3, comboTarget: 18 }, // 交替入门：小格 + 宽时限
+  { level: 7,  gridSize: 4, direction: 'alternate',  timeLimitPerNumber: 5, lives: 3, comboTarget: 20 },
+  { level: 8,  gridSize: 5, direction: 'alternate',  timeLimitPerNumber: 4, lives: 2, comboTarget: 22 }, // 交替进阶
+  { level: 9,  gridSize: 6, direction: 'desc',       timeLimitPerNumber: 4, lives: 2, comboTarget: 28 },
   { level: 10, gridSize: 6, direction: 'mixed',      timeLimitPerNumber: 3, lives: 1, comboTarget: 30 },
 ] as const;
 
@@ -64,12 +65,49 @@ export function computeScore(args: {
 
 // 确定性伪随机数（mulberry32）：见 src/lib/rng.ts
 
-// mixed 方向的固定序列生成（spec §4.2）
+// mixed 方向的固定序列生成
+// 注意：seed 必须与 SchulteGrid 的网格位置 seed（startTime）不同，否则
+// 相同 seed + 相同输入 [1..N] 会洗出完全相同的序列，导致「点击顺序 == 网格位置」，
+// 玩家看到的就是从左上角逐行点。这里用一个固定偏移让两者错开。
 export function generateMixedSequence(gridSize: number, startTime: number): number[] {
   const N = gridSize * gridSize;
-  const seed = startTime % 4294967296;
+  const seed = (startTime + 0x9e3779b9) % 4294967296;
   const arr = Array.from({ length: N }, (_, i) => i + 1);
   return seededShuffle(arr, seed);
+}
+
+// 交替方向：正向（从小往大）/ 反向（从大往小）
+export type StepDirection = '正' | '反';
+
+// 交替序列：双指针 + 随机段长（1-4）。从两端往中间，每段连续点 1-4 个同方向数字后翻转。
+// 同 seed 永远产出同序列，便于闯关重试复现。返回序列 + 每步对应方向（供 HUD 提示）。
+export function buildAlternateWithDirections(N: number, seed: number): {
+  sequence: number[];
+  directions: StepDirection[];
+} {
+  const rng = mulberry32(seed);
+  const sequence: number[] = [];
+  const directions: StepDirection[] = [];
+  let lo = 1;
+  let hi = N;
+  let dir: StepDirection = rng() < 0.5 ? '正' : '反'; // 初始方向随机
+  let remaining = N;
+  while (remaining > 0) {
+    // 本段长度：1-4，且不超过剩余可点数
+    const seg = Math.min(4, 1 + Math.floor(rng() * 4));
+    const steps = Math.min(seg, remaining);
+    for (let i = 0; i < steps; i++) {
+      if (dir === '正') {
+        sequence.push(lo++);
+      } else {
+        sequence.push(hi--);
+      }
+      directions.push(dir);
+      remaining--;
+    }
+    dir = dir === '正' ? '反' : '正'; // 段结束翻转方向
+  }
+  return { sequence, directions };
 }
 
 // 根据关卡 level 获取配置

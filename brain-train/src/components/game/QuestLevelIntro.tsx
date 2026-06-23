@@ -14,21 +14,19 @@ const DIRECTION_LABELS: Record<string, string> = {
   mixed: '混合',
 };
 
-// 交替/混合方向的具体点击规则示例（前几步），帮助玩家理解玩法
-function buildDirectionExample(direction: string, N: number): string {
+// 交替/混合方向的玩法说明（替代旧的固定序列示例）。返回多行说明，帮助玩家理解规则。
+function buildDirectionTip(direction: string): string[] {
   if (direction === 'alternate') {
-    // 1, N, 2, N-1, ...
-    const seq: number[] = [];
-    let lo = 1, hi = N;
-    for (let i = 0; i < Math.min(5, N); i++) {
-      seq.push(i % 2 === 0 ? lo++ : hi--);
-    }
-    return `${seq.join(' → ')}${N > 5 ? ' …' : ''}`;
+    return [
+      '看 HUD 的「正/反」方向提示',
+      '正向从小往大点，反向从大往小点',
+      '每点 1-4 个会随机翻转方向',
+    ];
   }
   if (direction === 'mixed') {
-    return '随机顺序，每一步看屏幕提示';
+    return ['随机顺序，每一步看屏幕提示'];
   }
-  return '';
+  return [];
 }
 
 export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
@@ -40,7 +38,7 @@ export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
   }
 
   const N = config.gridSize * config.gridSize;
-  const directionExample = buildDirectionExample(config.direction, N);
+  const directionTips = buildDirectionTip(config.direction);
 
   return (
     <motion.div
@@ -65,10 +63,12 @@ export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
             {config.direction === 'desc' && `（${N}→1）`}
           </span>
         </div>
-        {directionExample && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">点击规则</span>
-            <span className="font-bold font-mono text-xs">{directionExample}</span>
+        {directionTips.length > 0 && (
+          <div className="flex flex-col gap-1 pt-1">
+            <span className="text-muted-foreground">玩法</span>
+            {directionTips.map((tip, i) => (
+              <span key={i} className="font-bold text-xs leading-relaxed">· {tip}</span>
+            ))}
           </div>
         )}
         {config.timeLimitPerNumber && (

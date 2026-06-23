@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SchulteGrid } from '../../src/components/game/SchulteGrid';
+import { buildAlternateWithDirections } from '../../src/lib/schulteQuestConfig';
 
 describe('SchulteGrid', () => {
   it('渲染 3×3 网格（9 个数字）', () => {
@@ -198,8 +199,9 @@ describe('SchulteGrid', () => {
     expect(onTarget).toHaveBeenLastCalledWith(2);
   });
 
-  it('交替模式 onTargetChange 按正反交替序列推进（1, N, 2, N-1）', () => {
+  it('交替模式不报具体数字（onTargetChange 始终为 null）', () => {
     const onTarget = vi.fn();
+    const onDirection = vi.fn();
     render(
       <SchulteGrid
         gridSize={3}
@@ -210,13 +212,97 @@ describe('SchulteGrid', () => {
         onWrongClick={() => {}}
         onComplete={() => {}}
         onTargetChange={onTarget}
+        onDirectionChange={onDirection}
       />
     );
-    // 3×3=9，交替序列：1, 9, 2, 8, ...
-    expect(onTarget).toHaveBeenLastCalledWith(1);
-    fireEvent.click(screen.getByText('1'));
-    expect(onTarget).toHaveBeenLastCalledWith(9);
-    fireEvent.click(screen.getByText('9'));
-    expect(onTarget).toHaveBeenLastCalledWith(2);
+    // 交替模式：不暴露具体目标数字，只报方向
+    expect(onTarget).toHaveBeenLastCalledWith(null);
+    expect(onDirection).toHaveBeenLastCalledWith(expect.stringMatching(/正|反/));
+  });
+
+  it('buildAlternateWithDirections：覆盖全部 N 个数字、方向为正/反', () => {
+    const { sequence, directions } = buildAlternateWithDirections(9, 1000);
+    // 覆盖 1-9 全部、无重复
+    expect([...sequence].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(directions.every((d) => d === '正' || d === '反')).toBe(true);
+    expect(directions.length).toBe(9);
+  });
+
+  it('buildAlternateWithDirections：同 seed 可复现，不同 seed 一般不同', () => {
+    const a1 = buildAlternateWithDirections(9, 42);
+    const a2 = buildAlternateWithDirections(9, 42);
+    expect(a1.sequence).toEqual(a2.sequence); // 同 seed 复现
+
+    const b = buildAlternateWithDirections(9, 999);
+    // 不同 seed 大概率产生不同序列（极小概率撞同序列）
+    expect(b.sequence).not.toEqual(a1.sequence);
+  });
+
+  it('buildAlternateWithDirections：相邻同方向步长不超过 4', () => {
+    const { directions } = buildAlternateWithDirections(25, 7);
+    // 任一连续同方向段长度应在 1-4
+    let runLen = 1;
+    for (let i = 1; i < directions.length; i++) {
+      if (directions[i] === directions[i - 1]) {
+        runLen++;
+        expect(runLen).toBeLessThanOrEqual(4);
+      } else {
+        runLen = 1;
+      }
+    }
+  });
+
+  it('floatingTarget：紧贴棋盘显示目标数字', () => {
+    const { container } = render(
+      <SchulteGrid
+        gridSize={3}
+        order="asc"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        floatingTarget={{ target: 1, direction: null, perNumberTime: 5, perNumberTotal: 5, isAlternate: false }}
+      />
+    );
+    // 棋盘上沿叠加层显示目标数字（与网格里的数字 1 区分，只查叠加层）
+    const overlay = container.querySelector('.absolute.left-1\\/2');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.textContent).toContain('1');
+  });
+
+  it('floatingTarget：交替模式显示方向、不显示目标数字', () => {
+    const { container } = render(
+      <SchulteGrid
+        gridSize={3}
+        order="alternate"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        floatingTarget={{ target: null, direction: '正', perNumberTime: 6, perNumberTotal: 6, isAlternate: true }}
+      />
+    );
+    const overlay = container.querySelector('.absolute.left-1\\/2');
+    expect(overlay?.textContent).toContain('正');
+  });
+
+  it('floatingTarget：剩余 ≤ 20% 倒计时进入危险（红）样式', () => {
+    const { container } = render(
+      <SchulteGrid
+        gridSize={3}
+        order="desc"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        floatingTarget={{ target: 9, direction: null, perNumberTime: 0.4, perNumberTotal: 3, isAlternate: false }}
+      />
+    );
+    // 危险态叠加层用红色背景
+    const overlay = container.querySelector('.absolute.left-1\\/2');
+    expect(overlay?.className).toMatch(/red/);
   });
 });
