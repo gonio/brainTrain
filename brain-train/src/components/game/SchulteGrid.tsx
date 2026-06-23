@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { seededShuffle } from '../../lib/rng';
 
 interface SchulteGridProps {
@@ -62,6 +62,9 @@ export function SchulteGrid({
   const [combo, setCombo] = useState(0);
   const [lastClickTime, setLastClickTime] = useState(startTime);
 
+  // 使用 ref 同步跟踪点击状态，避免快速连点时闭包值过期
+  const clickStateRef = useRef({ clickedCount: 0, combo: 0, lastClickTime: startTime });
+
   const N = gridSize * gridSize;
 
   // 生成乱序网格（仅位置乱序，数字本身按 targetSequence 顺序点）
@@ -85,17 +88,24 @@ export function SchulteGrid({
     setClickedCount(0);
     setCombo(0);
     setLastClickTime(startTime);
+    clickStateRef.current = { clickedCount: 0, combo: 0, lastClickTime: startTime };
     onComboChange?.(0);
   }, [startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNumberClick = useCallback((number: number) => {
     if (!isActive) return;
 
-    if (number === expectedNumber) {
+    const state = clickStateRef.current;
+    const currentExpected = targetSequence[state.clickedCount];
+
+    if (number === currentExpected) {
       const currentTime = Date.now();
-      const clickDuration = (currentTime - lastClickTime) / 1000;
-      const newClicked = clickedCount + 1;
-      const newCombo = combo + 1;
+      const clickDuration = (currentTime - state.lastClickTime) / 1000;
+      const newClicked = state.clickedCount + 1;
+      const newCombo = state.combo + 1;
+
+      // 先同步更新 ref，再触发 React 渲染
+      clickStateRef.current = { clickedCount: newClicked, combo: newCombo, lastClickTime: currentTime };
       setClickedCount(newClicked);
       setCombo(newCombo);
       setLastClickTime(currentTime);
@@ -106,11 +116,12 @@ export function SchulteGrid({
         onComplete?.();
       }
     } else {
+      clickStateRef.current = { ...state, combo: 0 };
       setCombo(0);
       onComboChange?.(0);
       onWrongClick();
     }
-  }, [isActive, clickedCount, combo, expectedNumber, lastClickTime, N, onCorrectClick, onWrongClick, onComplete, onComboChange]);
+  }, [isActive, targetSequence, N, onCorrectClick, onWrongClick, onComplete, onComboChange]);
 
   // 已经点过的数字集合（用于显示已点击状态）
   const clickedNumbers = useMemo(() => {
