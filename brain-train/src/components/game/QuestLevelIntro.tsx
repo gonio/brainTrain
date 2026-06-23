@@ -14,6 +14,23 @@ const DIRECTION_LABELS: Record<string, string> = {
   mixed: '混合',
 };
 
+// 交替/混合方向的具体点击规则示例（前几步），帮助玩家理解玩法
+function buildDirectionExample(direction: string, N: number): string {
+  if (direction === 'alternate') {
+    // 1, N, 2, N-1, ...
+    const seq: number[] = [];
+    let lo = 1, hi = N;
+    for (let i = 0; i < Math.min(5, N); i++) {
+      seq.push(i % 2 === 0 ? lo++ : hi--);
+    }
+    return `${seq.join(' → ')}${N > 5 ? ' …' : ''}`;
+  }
+  if (direction === 'mixed') {
+    return '随机顺序，每一步看屏幕提示';
+  }
+  return '';
+}
+
 export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
   const config = getLevelConfig(level);
 
@@ -23,6 +40,7 @@ export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
   }
 
   const N = config.gridSize * config.gridSize;
+  const directionExample = buildDirectionExample(config.direction, N);
 
   return (
     <motion.div
@@ -47,10 +65,16 @@ export function QuestLevelIntro({ level, onStart }: QuestLevelIntroProps) {
             {config.direction === 'desc' && `（${N}→1）`}
           </span>
         </div>
+        {directionExample && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">点击规则</span>
+            <span className="font-bold font-mono text-xs">{directionExample}</span>
+          </div>
+        )}
         {config.timeLimitPerNumber && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">时限</span>
-            <span className="font-bold">每数字 {config.timeLimitPerNumber} 秒</span>
+            <span className="font-bold">每数字 {config.timeLimitPerNumber} 秒（屏幕显示倒计时）</span>
           </div>
         )}
         <div className="flex justify-between">

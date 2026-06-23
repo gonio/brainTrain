@@ -159,4 +159,64 @@ describe('SchulteGrid', () => {
     fireEvent.click(screen.getByText('9'));
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
+
+  it('错误点击给该格添加红色反馈样式（错点可见反馈）', () => {
+    render(
+      <SchulteGrid
+        gridSize={3}
+        order="asc"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+      />
+    );
+    const buttonTwo = screen.getByText('2'); // asc 首目标 1，点 2 是错的
+    fireEvent.click(buttonTwo);
+    expect(buttonTwo.className).toMatch(/red/);
+  });
+
+  it('onTargetChange 报告当前目标，点对后推进', () => {
+    const onTarget = vi.fn();
+    render(
+      <SchulteGrid
+        gridSize={3}
+        order="asc"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        onTargetChange={onTarget}
+      />
+    );
+    // 挂载后第一个目标是 1
+    expect(onTarget).toHaveBeenLastCalledWith(1);
+    fireEvent.click(screen.getByText('1'));
+    // 点对后推进到 2
+    expect(onTarget).toHaveBeenLastCalledWith(2);
+  });
+
+  it('交替模式 onTargetChange 按正反交替序列推进（1, N, 2, N-1）', () => {
+    const onTarget = vi.fn();
+    render(
+      <SchulteGrid
+        gridSize={3}
+        order="alternate"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        onTargetChange={onTarget}
+      />
+    );
+    // 3×3=9，交替序列：1, 9, 2, 8, ...
+    expect(onTarget).toHaveBeenLastCalledWith(1);
+    fireEvent.click(screen.getByText('1'));
+    expect(onTarget).toHaveBeenLastCalledWith(9);
+    fireEvent.click(screen.getByText('9'));
+    expect(onTarget).toHaveBeenLastCalledWith(2);
+  });
 });

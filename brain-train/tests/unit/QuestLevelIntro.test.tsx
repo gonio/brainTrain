@@ -50,4 +50,10 @@ describe('QuestLevelIntro', () => {
     expect(screen.getByText(/通关/)).toBeInTheDocument();
     expect(screen.getByText(/零错误|完美/)).toBeInTheDocument();
   });
+
+  it('交替关显示具体点击规则示例（1 → N → 2 …）', () => {
+    // 第 6 关 direction=alternate, 5×5=25，序列前 5 步：1 → 25 → 2 → 24 → 3
+    render(<QuestLevelIntro level={6} onStart={() => {}} />);
+    expect(screen.getByText(/1\s*→\s*25\s*→\s*2/)).toBeInTheDocument();
+  });
 });
