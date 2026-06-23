@@ -357,6 +357,10 @@ interface SchulteQuestProps {
 }
 
 function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
+  // 闯关模式音效：复用自由模式的 useAudio，遵循全局 soundEnabled 设置
+  const { soundEnabled } = useSettingsStore();
+  const { playEffect } = useAudio();
+
   // 当前关卡（继续时从 inProgressLevel，否则从 clearedLevel+1，再否则 1）
   const startLevel = initialProgress?.inProgressLevel
     ?? (initialProgress && initialProgress.clearedLevel < 10
@@ -377,6 +381,11 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   const [correctClickCount, setCorrectClickCount] = useState(0);
   const [lives, setLives] = useState(3);
   const [remainingTime, setRemainingTime] = useState<number | undefined>(undefined);
+  // 每数字倒计时：从 timeLimitPerNumber 开始，每次点对下一个数字时重置。
+  // undefined 表示该关无时限。耗尽即视为一次错误（扣命/失败）。
+  const [perNumberTime, setPerNumberTime] = useState<number | undefined>(undefined);
+  // 当前应点的目标数字 + 当前在交替/混合序列里的步进方向，供 HUD 实时提示。
+  const [currentTarget, setCurrentTarget] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<{
     stars: 0 | 1 | 2 | 3;
     score: number;
@@ -386,6 +395,9 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
 
   // refs：保存本次 playing 阶段最新值，供 timer/wrong-click 等 effect 读取，避免 stale closure
   const failGuardRef = useRef(false);  // 防止 fail 被多次触发
+  // 计时器上次 tick 时间戳：单个 interval 贯穿整局，避免「interval 依赖 remainingTime
+  // 而每 100ms 被重建」造成的卡顿/不生效问题。声明在 early return 之前以满足 hooks 规则。
+  const lastTickRef = useRef(0);
 
   const config = getLevelConfig(currentLevel);
   if (!config) return null;
@@ -464,7 +476,11 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
 
     setLastResult({ stars, score, completionTime });
     setPhase(isLast ? 'completed' : 'pass');
-  }, [gameStartTime, maxCombo, errors, config, currentLevel, remainingTime, progress]);
+
+    if (soundEnabled) {
+      playEffect('complete');
+    }
+  }, [gameStartTime, maxCombo, errors, config, currentLevel, remainingTime, progress, soundEnabled, playEffect]);
 
   // 进入关卡 intro 时持久化 inProgressLevel
   useEffect(() => {
@@ -481,21 +497,44 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     });
   }, [phase, currentLevel, saveQuestProgress]);
 
-  // 计时器：仅 playing + 有时限时启用；remainingTime <= 0 时切到 fail
+  // 计时器：仅在 playing + 有时限时启用。
+  // 用 lastTickRef 记录上次 tick 时间戳，单个 interval 贯穿整局，避免「interval 依赖 remainingTime
+  // 而每 100ms 被重建」造成的卡顿/不生效问题。
   useEffect(() => {
-    if (phase !== 'playing' || !config.timeLimitPerNumber || remainingTime === undefined) return;
+    if (phase !== 'playing' || !config.timeLimitPerNumber) return;
 
-    if (remainingTime <= 0) {
-      handleFail();
-      return;
-    }
-
+    lastTickRef.current = Date.now();
     const interval = setInterval(() => {
-      setRemainingTime((prev) => (prev !== undefined ? Math.max(0, prev - 0.1) : prev));
+      const now = Date.now();
+      // clamp 到 0.1s 的整数倍，避免累积浮点误差
+      const delta = Math.min(0.2, (now - lastTickRef.current) / 1000);
+      lastTickRef.current = now;
+
+      setPerNumberTime((prev) => {
+        if (prev === undefined) return prev;
+        return Math.max(0, prev - delta);
+      });
+      setRemainingTime((prev) => {
+        if (prev === undefined) return prev;
+        return Math.max(0, prev - delta);
+      });
     }, 100);
 
     return () => clearInterval(interval);
-  }, [phase, remainingTime, config.timeLimitPerNumber, handleFail]);
+  }, [phase, config.timeLimitPerNumber]);
+
+  // 每数字倒计时耗尽 → 视为一次错误并重置该数字的倒计时
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    if (perNumberTime !== undefined && perNumberTime <= 0) {
+      handleWrongClick();
+      // 重置当前数字的时间窗，给玩家继续的机会
+      setPerNumberTime(config.timeLimitPerNumber);
+    }
+    if (remainingTime !== undefined && remainingTime <= 0) {
+      handleFail();
+    }
+  }, [perNumberTime, remainingTime, phase, config.timeLimitPerNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStart = () => {
     setGameStartTime(Date.now());
@@ -505,6 +544,9 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     setCorrectClickCount(0);
     setLives(config.lives);
     setRemainingTime(totalTime);
+    // 每数字倒计时：初始给满 timeLimitPerNumber
+    setPerNumberTime(config.timeLimitPerNumber);
+    setCurrentTarget(null);
     failGuardRef.current = false;
     setPhase('playing');
   };
@@ -512,6 +554,9 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   const handleWrongClick = () => {
     if (failGuardRef.current) return;
     setErrors((prev) => prev + 1);
+    if (soundEnabled) {
+      playEffect('wrong');
+    }
     // 用函数式更新避免闭包 lives 陈旧值，连续错点也能每次扣 1 命
     setLives((prevLives) => {
       const next = prevLives - 1;
@@ -529,6 +574,17 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
 
   const handleCorrectClick = () => {
     setCorrectClickCount((prev) => prev + 1);
+    // 点对一个数字 → 重置该数字的倒计时窗口
+    if (config.timeLimitPerNumber) {
+      setPerNumberTime(config.timeLimitPerNumber);
+    }
+    if (soundEnabled) {
+      playEffect('tick');
+    }
+  };
+
+  const handleTargetChange = (target: number | null) => {
+    setCurrentTarget(target);
   };
 
   const handleNext = () => {
@@ -585,6 +641,11 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
             combo={combo}
             remainingTime={remainingTime}
             totalTime={totalTime}
+            perNumberTime={perNumberTime}
+            perNumberTotal={config.timeLimitPerNumber}
+            currentTarget={currentTarget}
+            correctClickCount={correctClickCount}
+            gridTotal={N}
           />
           <SchulteGrid
             gridSize={config.gridSize}
@@ -600,6 +661,7 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
             onWrongClick={handleWrongClick}
             onComplete={handleComplete}
             onComboChange={handleComboChange}
+            onTargetChange={handleTargetChange}
           />
         </>
       )}
