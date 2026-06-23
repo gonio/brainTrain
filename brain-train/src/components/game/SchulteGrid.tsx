@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { seededShuffle } from '../../lib/rng';
+import { buildAlternateWithDirections, type StepDirection } from '../../lib/schulteQuestConfig';
 
 interface SchulteGridProps {
   gridSize: 3 | 4 | 5 | 6;
@@ -12,15 +13,26 @@ interface SchulteGridProps {
   onWrongClick: () => void;
   onComplete?: () => void;
   onComboChange?: (combo: number) => void;
-  // 下一个目标数字变化时通知（null = 已全部点完）。用于 HUD 显示「下一个」提示。
+  // 下一个目标数字变化时通知（null = 已全部点完 / 交替模式不报具体数字）。用于 HUD。
   onTargetChange?: (target: number | null) => void;
+  // 交替模式：当前方向（正/反）变化时通知。asc/desc 关不触发。
+  onDirectionChange?: (dir: StepDirection | null) => void;
+  // 紧贴棋盘的浮动目标提示（可选）。传入则在棋盘上沿叠加，余光可见、无需远眺。
+  floatingTarget?: {
+    target: number | null;              // 目标数字（交替模式为 null）
+    direction: StepDirection | null;    // 交替模式方向
+    perNumberTime?: number;             // 每数字倒计时
+    perNumberTotal?: number;            // 每数字总时限
+    isAlternate: boolean;
+  };
 }
 
 // 计算下一个目标数字的索引序列
 function buildTargetSequence(
   gridSize: number,
   order: 'asc' | 'desc' | 'alternate' | 'mixed',
-  expectedSequence?: number[]
+  expectedSequence?: number[],
+  seed?: number,
 ): number[] {
   const N = gridSize * gridSize;
   if (order === 'asc') {
@@ -30,17 +42,9 @@ function buildTargetSequence(
     return Array.from({ length: N }, (_, i) => N - i);
   }
   if (order === 'alternate') {
-    // 1, N, 2, N-1, ...
-    const seq: number[] = [];
-    let lo = 1, hi = N;
-    for (let i = 0; i < N; i++) {
-      if (i % 2 === 0) {
-        seq.push(lo++);
-      } else {
-        seq.push(hi--);
-      }
-    }
-    return seq;
+    // 从两端往中间：正向段点 lo,lo+1,...；反向段点 hi,hi-1,...
+    // 每段长度随机 1-4（确定性 RNG，保证重试可复现），段长点完后翻方向。
+    return buildAlternateWithDirections(N, seed ?? 0).sequence;
   }
   // mixed
   if (expectedSequence && expectedSequence.length === N) {
@@ -48,6 +52,55 @@ function buildTargetSequence(
   }
   // 兜底（不该到这里）
   return Array.from({ length: N }, (_, i) => i + 1);
+}
+
+// 紧贴棋盘上沿的浮动目标提示。锚定在棋盘容器顶部正中、半浮出上边缘，
+// 与棋盘几乎零距离，玩家点棋盘时余光即可扫到目标/方向。
+function TargetOverlay({
+  target,
+}: {
+  target: NonNullable<SchulteGridProps['floatingTarget']>;
+}) {
+  const { target: num, direction, perNumberTime, perNumberTotal, isAlternate } = target;
+  const perPercent = perNumberTotal && perNumberTime !== undefined
+    ? (perNumberTime / perNumberTotal) * 100
+    : 100;
+  const isDanger = perPercent <= 20;
+  const isWarning = perPercent <= 40;
+
+  return (
+    <motion.div
+      // key 变化触发淡入，强化「目标/方向变了」的感知
+      key={isAlternate ? (direction ?? 'none') : (num ?? 'none')}
+      initial={{ y: -6, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.18 }}
+      className={`absolute left-1/2 -translate-x-1/2 -top-3 z-20 flex items-center gap-2 px-4 py-1.5 rounded-full shadow-lg border pointer-events-none ${
+        isDanger
+          ? 'bg-red-500 border-red-400 text-white'
+          : isWarning
+            ? 'bg-amber-400 border-amber-300 text-white'
+            : 'bg-primary border-primary text-primary-foreground'
+      }`}
+    >
+      {/* 目标数字 / 方向：大号、高对比，余光可读 */}
+      {isAlternate ? (
+        <span className="text-xl font-black font-headline leading-none">
+          {direction ?? '—'}
+        </span>
+      ) : (
+        <span className="text-xl font-black font-headline leading-none tabular-nums">
+          {num ?? '—'}
+        </span>
+      )}
+      {/* 倒计时小号紧贴，剩余少时不变色（整体卡片已变色） */}
+      {perNumberTime !== undefined && (
+        <span className="text-xs font-bold font-mono opacity-90 tabular-nums">
+          {perNumberTime.toFixed(1)}s
+        </span>
+      )}
+    </motion.div>
+  );
 }
 
 export function SchulteGrid({
@@ -61,6 +114,8 @@ export function SchulteGrid({
   onComplete,
   onComboChange,
   onTargetChange,
+  onDirectionChange,
+  floatingTarget,
 }: SchulteGridProps) {
   const [clickedCount, setClickedCount] = useState(0);
   // 错点反馈：记录最近一次点错的数字，触发该格震动+红闪。一定时间后自动清除。
@@ -82,11 +137,18 @@ export function SchulteGrid({
     return seededShuffle(arr, seed);
   }, [N, startTime]);
 
-  // 计算下一个目标数字
-  const targetSequence = useMemo(
-    () => buildTargetSequence(gridSize, order, expectedSequence),
-    [gridSize, order, expectedSequence]
-  );
+  // 计算下一个目标数字。交替模式额外算出每步方向（正/反）。
+  const seedNum = startTime % 4294967296;
+  const { targetSequence, alternateDirections } = useMemo(() => {
+    if (order === 'alternate') {
+      const { sequence, directions } = buildAlternateWithDirections(N, seedNum);
+      return { targetSequence: sequence, alternateDirections: directions };
+    }
+    return {
+      targetSequence: buildTargetSequence(gridSize, order, expectedSequence, seedNum),
+      alternateDirections: null as StepDirection[] | null,
+    };
+  }, [gridSize, order, expectedSequence, N, seedNum]);
 
   // 重置：startTime 变化时回到初始
   useEffect(() => {
@@ -100,10 +162,20 @@ export function SchulteGrid({
     onComboChange?.(0);
   }, [startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 向外报告「下一个目标数字」，供 HUD 实时提示当前方向与目标。点完为 null。
+  // 向外报告「下一个目标数字」。交替模式不报具体数字（传 null），改由 onDirectionChange 报方向。
   useEffect(() => {
-    onTargetChange?.(clickedCount >= N ? null : targetSequence[clickedCount] ?? null);
-  }, [clickedCount, targetSequence, N, onTargetChange]);
+    if (order === 'alternate') {
+      onTargetChange?.(null);
+    } else {
+      onTargetChange?.(clickedCount >= N ? null : targetSequence[clickedCount] ?? null);
+    }
+  }, [clickedCount, targetSequence, N, order, onTargetChange]);
+
+  // 交替模式：报告当前方向（正/反），点完为 null。
+  useEffect(() => {
+    if (order !== 'alternate' || !alternateDirections) return;
+    onDirectionChange?.(clickedCount >= N ? null : alternateDirections[clickedCount] ?? null);
+  }, [clickedCount, alternateDirections, order, onDirectionChange, N]);
 
   // 卸载时清理错点定时器，避免对已卸载组件 setState
   useEffect(() => {
@@ -159,6 +231,13 @@ export function SchulteGrid({
       <div className="relative w-full max-w-md aspect-square bg-surface-container-low rounded-xl p-4 shadow-2xl">
         {/* 背景柔光 */}
         <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full pointer-events-none" />
+
+        {/* 紧贴棋盘上沿的浮动目标提示：余光可见，无需远眺上方 HUD。
+            紧贴棋盘边缘、高对比卡片，消除「数字离棋盘太远」的问题。 */}
+        {floatingTarget && (
+          <TargetOverlay target={floatingTarget} />
+        )}
+
         <div
           className="grid gap-3 h-full w-full relative z-10"
           style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}

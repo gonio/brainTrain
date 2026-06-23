@@ -7,6 +7,7 @@ import {
   computeScore,
   generateMixedSequence,
 } from '../../src/lib/schulteQuestConfig';
+import { seededShuffle } from '../../src/lib/rng';
 
 describe('SCHULTE_QUEST_LEVELS', () => {
   it('有 10 关', () => {
@@ -139,5 +140,19 @@ describe('generateMixedSequence', () => {
   it('3×3 网格生成 9 个数字', () => {
     const seq = generateMixedSequence(3, 0);
     expect(seq).toHaveLength(9);
+  });
+
+  it('mixed 序列与网格位置序列错开（修复「左上角逐行」bug）', () => {
+    // 回归：网格位置用 seededShuffle([1..N], startTime)，
+    // mixed 序列若用相同 seed 会洗出完全相同序列 → 点击顺序 == 网格位置 → 左上角逐行。
+    // 这里复现网格位置的洗牌，断言 mixed 序列与之不同。
+    const startTime = 7777;
+    const N = 6 * 6;
+    const gridPositions = seededShuffle(
+      Array.from({ length: N }, (_, i) => i + 1),
+      startTime % 4294967296,
+    );
+    const mixed = generateMixedSequence(6, startTime);
+    expect(mixed).not.toEqual(gridPositions);
   });
 });

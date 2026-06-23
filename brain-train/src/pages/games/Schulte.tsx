@@ -386,6 +386,8 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   const [perNumberTime, setPerNumberTime] = useState<number | undefined>(undefined);
   // 当前应点的目标数字 + 当前在交替/混合序列里的步进方向，供 HUD 实时提示。
   const [currentTarget, setCurrentTarget] = useState<number | null>(null);
+  // 交替模式当前方向（正/反），HUD 只显示这个、不显示具体数字。
+  const [currentDirection, setCurrentDirection] = useState<'正' | '反' | null>(null);
   const [lastResult, setLastResult] = useState<{
     stars: 0 | 1 | 2 | 3;
     score: number;
@@ -547,6 +549,7 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     // 每数字倒计时：初始给满 timeLimitPerNumber
     setPerNumberTime(config.timeLimitPerNumber);
     setCurrentTarget(null);
+    setCurrentDirection(null);
     failGuardRef.current = false;
     setPhase('playing');
   };
@@ -585,6 +588,10 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
 
   const handleTargetChange = (target: number | null) => {
     setCurrentTarget(target);
+  };
+
+  const handleDirectionChange = (dir: '正' | '反' | null) => {
+    setCurrentDirection(dir);
   };
 
   const handleNext = () => {
@@ -641,11 +648,6 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
             combo={combo}
             remainingTime={remainingTime}
             totalTime={totalTime}
-            perNumberTime={perNumberTime}
-            perNumberTotal={config.timeLimitPerNumber}
-            currentTarget={currentTarget}
-            correctClickCount={correctClickCount}
-            gridTotal={N}
           />
           <SchulteGrid
             gridSize={config.gridSize}
@@ -662,6 +664,14 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
             onComplete={handleComplete}
             onComboChange={handleComboChange}
             onTargetChange={handleTargetChange}
+            onDirectionChange={handleDirectionChange}
+            floatingTarget={{
+              target: currentTarget,
+              direction: currentDirection,
+              perNumberTime,
+              perNumberTotal: config.timeLimitPerNumber,
+              isAlternate: config.direction === 'alternate',
+            }}
           />
         </>
       )}
