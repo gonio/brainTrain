@@ -469,14 +469,17 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   // 进入关卡 intro 时持久化 inProgressLevel
   useEffect(() => {
     if (phase !== 'intro') return;
-    failGuardRef.current = false;  // 每关重置 guard
-    const updated: SchulteQuestProgress = {
-      ...progress,
-      inProgressLevel: currentLevel,
-    };
-    setProgress(updated);
-    saveQuestProgress(updated);
-  }, [phase, currentLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+    failGuardRef.current = false; // 每关重置 guard
+
+    setProgress((prev) => {
+      const updated: SchulteQuestProgress = {
+        ...prev,
+        inProgressLevel: currentLevel,
+      };
+      void saveQuestProgress(updated);
+      return updated;
+    });
+  }, [phase, currentLevel, saveQuestProgress]);
 
   // 计时器：仅 playing + 有时限时启用；remainingTime <= 0 时切到 fail
   useEffect(() => {
