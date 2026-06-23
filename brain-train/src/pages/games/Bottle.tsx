@@ -1,0 +1,194 @@
+import { useState, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useGameStore } from '../../stores/gameStore';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { useAudio } from '../../hooks/useAudio';
+import { BottleGame } from '../../components/game/BottleGame';
+import { ScoreBoard } from '../../components/game/ScoreBoard';
+import { GameControlBar } from '../../components/game/GameControlBar';
+import { GameStartScreen } from '../../components/game/GameStartScreen';
+import { DifficultySelector } from '../../components/game/DifficultySelector';
+import type { TrainingDetails } from '../../types';
+
+type Difficulty = 'easy' | 'medium' | 'hard';
+
+const DIFFICULTY_CONFIG = {
+  easy: { count: 4, label: '简单' },
+  medium: { count: 6, label: '中等' },
+  hard: { count: 9, label: '困难' },
+} as const;
+
+// 基准时间（秒）和惩罚系数按难度设定
+const SCORING_CONFIG: Record<Difficulty, { baselineTime: number; stepPenalty: number; timeDecay: number }> = {
+  easy:   { baselineTime: 30,  stepPenalty: 15, timeDecay: 1.0 },
+  medium: { baselineTime: 60,  stepPenalty: 10, timeDecay: 0.5 },
+  hard:   { baselineTime: 120, stepPenalty: 8,  timeDecay: 0.3 },
+};
+
+export function Bottle() {
+  const { startGame, endGame, status } = useGameStore();
+  const { soundEnabled } = useSettingsStore();
+  const { playEffect } = useAudio();
+
+  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [gameStartTime, setGameStartTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [totalSwaps, setTotalSwaps] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
+  const [lastOptimalSwaps, setLastOptimalSwaps] = useState(0);
+
+  const isPlaying = status === 'playing';
+  const isPaused = status === 'paused';
+  const isIdle = status === 'idle';
+
+  // 计时器
+  useEffect(() => {
+    if (!isPlaying || gameStartTime === 0) return;
+    const interval = setInterval(() => {
+      setElapsedTime((Date.now() - gameStartTime) / 1000);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isPlaying, gameStartTime]);
+
+  const handleStart = useCallback(() => {
+    startGame('bottle');
+    setGameStartTime(Date.now());
+    setElapsedTime(0);
+    setTotalSwaps(0);
+    setShowResult(false);
+    setFinalScore(0);
+  }, [startGame]);
+
+  const handleSwap = useCallback(() => {
+    setTotalSwaps(prev => prev + 1);
+    if (soundEnabled) {
+      playEffect('tick');
+    }
+  }, [soundEnabled, playEffect]);
+
+  const handleComplete = useCallback((
+    swaps: number,
+    optimalSwaps: number,
+    targetSeq: string[],
+    playerSeq: string[],
+  ) => {
+    const totalTime = (Date.now() - gameStartTime) / 1000;
+    const config = SCORING_CONFIG[difficulty];
+    const bottleCount = DIFFICULTY_CONFIG[difficulty].count;
+
+    // 计分：步数 70% + 时间 30%
+    const extraSwaps = Math.max(0, swaps - optimalSwaps);
+    const stepScore = Math.max(0, 100 - extraSwaps * config.stepPenalty);
+    const timeScore = Math.max(0, 100 - Math.max(0, totalTime - config.baselineTime) * config.timeDecay);
+    const score = Math.min(100, Math.round(stepScore * 0.7 + timeScore * 0.3));
+
+    const accuracy = Math.round((optimalSwaps / Math.max(1, swaps)) * 100);
+
+    const details: TrainingDetails = {
+      difficulty,
+      bottleCount,
+      targetSequence: targetSeq,
+      playerSequence: playerSeq,
+      totalSwaps: swaps,
+      optimalSwaps,
+      completionTime: totalTime,
+    };
+
+    endGame({ score, accuracy, details });
+    setFinalScore(score);
+    setLastOptimalSwaps(optimalSwaps);
+    setShowResult(true);
+
+    if (soundEnabled) {
+      playEffect('complete');
+    }
+  }, [gameStartTime, difficulty, endGame, soundEnabled, playEffect]);
+
+  const bottleCount = DIFFICULTY_CONFIG[difficulty].count;
+
+  return (
+    <>
+      <GameControlBar
+        title="暗瓶排列"
+        showTimer={isPlaying}
+        elapsedTime={Math.floor(elapsedTime)}
+      />
+
+      <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        {/* 开始页面 */}
+        {isIdle && !showResult && (
+          <div className="flex flex-col items-center gap-6 pt-8">
+            <GameStartScreen
+              mode="bottle"
+              title="暗瓶排列"
+              description="交换上排瓶子，推理出隐藏的下排排列"
+              onStart={handleStart}
+            />
+            {/* 难度选择 */}
+            <div className="w-full max-w-xs">
+              <DifficultySelector
+                value={difficulty}
+                onChange={(d) => setDifficulty(d)}
+              />
+              <p className="text-center text-xs text-muted-foreground mt-2">
+                {bottleCount} 个瓶子
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 游戏进行中 */}
+        {(isPlaying || isPaused) && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
+            <BottleGame
+              bottleCount={bottleCount}
+              isActive={isPlaying}
+              startTime={gameStartTime}
+              onSwap={handleSwap}
+              onComplete={handleComplete}
+            />
+            {/* 底部状态 */}
+            <div className="flex justify-center gap-12">
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">步数</span>
+                <span className="text-foreground text-2xl font-bold font-headline">{totalSwaps}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">用时</span>
+                <span className="text-foreground text-2xl font-bold font-headline">{Math.floor(elapsedTime)}s</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 结果页面 */}
+        {showResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-6 pt-8"
+          >
+            <div className="p-6 bg-surface-container-low rounded-2xl border border-border w-full">
+              <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
+              <ScoreBoard score={finalScore} accuracy={Math.round((lastOptimalSwaps / Math.max(1, totalSwaps)) * 100)} />
+              <div className="mt-4 text-center text-sm text-muted-foreground space-y-1">
+                <p>步数: {totalSwaps}（最优: {lastOptimalSwaps}）</p>
+                <p>用时: {elapsedTime.toFixed(1)}秒</p>
+                <p>难度: {DIFFICULTY_CONFIG[difficulty].label}（{bottleCount}个瓶子）</p>
+              </div>
+            </div>
+            <motion.button
+              onClick={handleStart}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
+            >
+              再玩一次
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
+    </>
+  );
+}

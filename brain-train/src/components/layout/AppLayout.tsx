@@ -9,7 +9,7 @@ interface AppLayoutProps {
 }
 
 // 游戏路径列表
-const GAME_PATHS = ['/games/schulte', '/games/stroop', '/games/sequence'];
+const GAME_PATHS = ['/games/schulte', '/games/stroop', '/games/sequence', '/games/bottle'];
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
