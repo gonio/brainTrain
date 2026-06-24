@@ -143,14 +143,9 @@ export function Bottle() {
         {/* 开始页面（含难度选择） */}
         {isIdle && !showResult && (
           <div className="flex flex-col items-center gap-6 pt-8">
-            <GameStartScreen
-              mode="bottle"
-              title="暗瓶排列"
-              description="交换上排瓶子，推理出隐藏的下排排列"
-              onStart={handleStart}
-            />
-            {/* 难度选择 */}
+            {/* 难度选择放在最前，从结果页「选难度」回来时第一眼可见 */}
             <div className="w-full max-w-xs">
+              <p className="text-center text-sm font-semibold mb-2 text-foreground">选择难度</p>
               <DifficultySelector
                 value={difficulty}
                 onChange={(d) => setDifficulty(d)}
@@ -159,6 +154,12 @@ export function Bottle() {
                 {bottleCount} 个瓶子
               </p>
             </div>
+            <GameStartScreen
+              mode="bottle"
+              title="暗瓶排列"
+              description="交换上排瓶子，推理出隐藏的下排排列"
+              onStart={handleStart}
+            />
           </div>
         )}
 
@@ -202,6 +203,16 @@ export function Bottle() {
                 <p>难度: {DIFFICULTY_CONFIG[difficulty].label}（{bottleCount}个瓶子）</p>
               </div>
             </div>
+            <div className="w-full max-w-xs">
+              <p className="text-center text-sm font-semibold mb-2 text-foreground">再玩一次（可改难度）</p>
+              <DifficultySelector
+                value={difficulty}
+                onChange={(d) => setDifficulty(d)}
+              />
+              <p className="text-center text-xs text-muted-foreground mt-2 mb-4">
+                {bottleCount} 个瓶子
+              </p>
+            </div>
             <div className="flex gap-3">
               <motion.button
                 onClick={handleStart}
@@ -217,7 +228,7 @@ export function Bottle() {
                 whileTap={{ scale: 0.95 }}
                 className="px-8 py-3 bg-surface-container-high text-foreground rounded-xl font-semibold hover:bg-surface-container-highest transition-all shadow-lg"
               >
-                选难度
+                返回
               </motion.button>
             </div>
           </motion.div>
