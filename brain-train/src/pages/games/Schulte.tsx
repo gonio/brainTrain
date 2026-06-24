@@ -510,7 +510,8 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     lastTickRef.current = Date.now();
     const interval = setInterval(() => {
       const now = Date.now();
-      // clamp 到 0.1s 的整数倍，避免累积浮点误差
+      // delta 上限 0.2s，防止页面切后台回来时一次性扣掉一大段时间；同时基于实际墙钟
+      // 差值而非固定 0.1，让计时更贴合真实流逝时间。
       const delta = Math.min(0.2, (now - lastTickRef.current) / 1000);
       lastTickRef.current = now;
 

@@ -48,6 +48,8 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
   const dragInfoRef = useRef<DragInfo | null>(null);
   const selectedRef = useRef<number | null>(null);
   const hadDragRef = useRef(false);
+  // 完成态标记：达成后立即置位，pointer handlers 据此短路，避免完成态后继续交互。
+  const completedRef = useRef(false);
 
   // 生成目标序列和初始玩家序列。startTime 作为生成标识：每局变化即重新生成。
   const { target, initialPlayer, optimal } = useMemo(() => {
@@ -75,6 +77,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
     selectedRef.current = null;
     setDrag(null);
     dragInfoRef.current = null;
+    completedRef.current = false;
   }, [startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 交换两个位置的瓶子
@@ -94,8 +97,13 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
     onSwap(matches);
 
     if (matches === bottleCount) {
+      // 达成完成态：立即锁定，pointer handlers 短路，避免完成态后继续交互。
+      completedRef.current = true;
+      // 达成完成态时立即快照 swaps，避免 400ms 延迟期间 swapCountRef 继续递增
+      // 导致记录的 swaps 与完成瞬间不一致。
+      const finalSwaps = swapCountRef.current;
       setTimeout(() => {
-        onComplete(swapCountRef.current, optimal, target, next);
+        onComplete(finalSwaps, optimal, target, next);
       }, 400);
     }
   }, [playerSequence, target, bottleCount, optimal, onSwap, onComplete]);
@@ -114,11 +122,12 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
   // 自定义拖拽 — 使用 ref 避免闭包过期问题
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (!isActive) return;
+    if (!isActive || completedRef.current) return;
     const slot = (e.target as HTMLElement).closest('[data-slot]');
     if (!slot) return;
     const index = parseInt(slot.getAttribute('data-slot')!);
-    gameAreaRef.current?.setPointerCapture(e.pointerId);
+    // 可选链调用，兼容缺少 Pointer Capture API 的环境
+    gameAreaRef.current?.setPointerCapture?.(e.pointerId);
     dragInfoRef.current = {
       sourceIndex: index,
       startX: e.clientX,
@@ -154,7 +163,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
     if (!info) return;
     dragInfoRef.current = null;
     hadDragRef.current = false;
-    gameAreaRef.current?.releasePointerCapture(e.pointerId);
+    gameAreaRef.current?.releasePointerCapture?.(e.pointerId);
 
     if (info.isDragging) {
       setDrag(null);
@@ -162,8 +171,8 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
       if (targetSlot !== null && targetSlot !== info.sourceIndex) {
         swapBottles(info.sourceIndex, targetSlot);
       }
-    } else {
-      // tap：使用 ref 避免闭包过期
+    } else if (!completedRef.current) {
+      // tap：使用 ref 避免闭包过期。完成态后不再响应 tap。
       const prev = selectedRef.current;
       if (prev === null) {
         selectedRef.current = info.sourceIndex;
@@ -177,6 +186,17 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
       }
     }
   }, [findTargetSlot, swapBottles]);
+
+  // pointercancel / 失去 pointer capture（移动端手势中断、来电/切后台等）：
+  // 统一清理拖拽中间态，否则会卡住后续交互。
+  const handlePointerCancel = useCallback((e: React.PointerEvent) => {
+    if (dragInfoRef.current) {
+      dragInfoRef.current = null;
+      hadDragRef.current = false;
+      setDrag(null);
+    }
+    gameAreaRef.current?.releasePointerCapture?.(e.pointerId);
+  }, []);
 
   // 根据瓶子数量计算尺寸
   const bottleWidth = bottleCount <= 4 ? 56 : bottleCount <= 6 ? 44 : 36;
@@ -195,6 +215,8 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onLostPointerCapture={handlePointerCancel}
     >
       {/* 匹配计数 */}
       <div className="text-center">
