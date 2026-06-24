@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useAudio } from '../../src/hooks/useAudio';
+import { useAudio, __resetSharedAudioContextForTest } from '../../src/hooks/useAudio';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 
 // 构造可控的 mock AudioContext，记录调用次数与节点创建情况
@@ -78,6 +78,8 @@ describe('useAudio', () => {
   beforeEach(() => {
     // 每个用例前重置 store，默认开启声音
     useSettingsStore.setState({ soundEnabled: true });
+    // 重置模块级 AudioContext 单例，避免用例间状态串扰（单例不会被 gc）
+    __resetSharedAudioContextForTest();
     mock = createMockAudioContext();
     Object.defineProperty(window, 'AudioContext', {
       configurable: true,

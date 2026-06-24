@@ -400,6 +400,8 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   // 计时器上次 tick 时间戳：单个 interval 贯穿整局，避免「interval 依赖 remainingTime
   // 而每 100ms 被重建」造成的卡顿/不生效问题。声明在 early return 之前以满足 hooks 规则。
   const lastTickRef = useRef(0);
+  // 最新 handler 引用：每次 render 同步，让超时 effect 读到最新 handler 而非 stale 闭包。
+  const handlersRef = useRef<{ onWrong: () => void; onFail: () => void }>({ onWrong: () => {}, onFail: () => {} });
 
   const config = getLevelConfig(currentLevel);
   if (!config) return null;
@@ -525,18 +527,20 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
     return () => clearInterval(interval);
   }, [phase, config.timeLimitPerNumber]);
 
-  // 每数字倒计时耗尽 → 视为一次错误并重置该数字的倒计时
+  // 每数字倒计时耗尽 → 视为一次错误并重置该数字的倒计时。
+  // 通过 handlersRef 读最新 handler，避免 stale closure（handleWrongClick 非 useCallback，
+  // 直接放进依赖会每次 render 重跑 effect；ref 模式更稳定）。
   useEffect(() => {
     if (phase !== 'playing') return;
     if (perNumberTime !== undefined && perNumberTime <= 0) {
-      handleWrongClick();
+      handlersRef.current.onWrong();
       // 重置当前数字的时间窗，给玩家继续的机会
       setPerNumberTime(config.timeLimitPerNumber);
     }
     if (remainingTime !== undefined && remainingTime <= 0) {
-      handleFail();
+      handlersRef.current.onFail();
     }
-  }, [perNumberTime, remainingTime, phase, config.timeLimitPerNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [perNumberTime, remainingTime, phase, config.timeLimitPerNumber]);
 
   const handleStart = () => {
     setGameStartTime(Date.now());
@@ -569,6 +573,10 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
       return Math.max(0, next);
     });
   };
+
+  // 每次 render 同步最新 handler 到 ref，让超时 effect 读到当前状态的 handler（soundEnabled 等）
+  handlersRef.current.onWrong = handleWrongClick;
+  handlersRef.current.onFail = handleFail;
 
   const handleComboChange = (newCombo: number) => {
     setCombo(newCombo);

@@ -119,7 +119,9 @@ export function Bottle() {
       completionTime: totalTime,
     };
 
-    void endGame({ score, accuracy: 0, details });
+    // 暗瓶的初始排列是随机的，玩家用多少步受运气影响，准确率（optimal/actual）不具参考意义，故不显示。
+    // 但完成态意味着位置全匹配，写入 100 避免污染 Stats 的 avgAccuracy 聚合统计。
+    void endGame({ score, accuracy: 100, details });
     setFinalScore(score);
     setLastOptimalSwaps(optimalSwaps);
     setShowResult(true);
