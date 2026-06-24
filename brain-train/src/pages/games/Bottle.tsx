@@ -32,7 +32,7 @@ const SCORING_CONFIG: Record<Difficulty, {
 };
 
 export function Bottle() {
-  const { startGame, endGame, status } = useGameStore();
+  const { startGame, endGame, resetGame, status } = useGameStore();
   const { soundEnabled } = useSettingsStore();
   const { playEffect } = useAudio();
 
@@ -71,6 +71,16 @@ export function Bottle() {
     setShowResult(false);
     setFinalScore(0);
   }, [startGame]);
+
+  // 再玩一次：回到开始/选难度页，而非直接开新一局（让玩家能改难度）
+  const handlePlayAgain = useCallback(() => {
+    resetGame();
+    setShowResult(false);
+    setFinalScore(0);
+    setFinalTime(0);
+    setElapsedTime(0);
+    setTotalSwaps(0);
+  }, [resetGame]);
 
   const handleSwap = useCallback(() => {
     setTotalSwaps(prev => prev + 1);
@@ -130,7 +140,7 @@ export function Bottle() {
       />
 
       <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
-        {/* 开始页面 */}
+        {/* 开始页面（含难度选择） */}
         {isIdle && !showResult && (
           <div className="flex flex-col items-center gap-6 pt-8">
             <GameStartScreen
@@ -152,12 +162,12 @@ export function Bottle() {
           </div>
         )}
 
-        {/* 游戏进行中 */}
-        {(isPlaying || isPaused) && (
+        {/* 游戏进行中：完成后(showResult)不再渲染棋盘，本局即定局 */}
+        {!showResult && (isPlaying || isPaused) && (
           <div className="flex-1 flex flex-col items-center justify-center gap-8 py-8">
             <BottleGame
               bottleCount={bottleCount}
-              isActive={isPlaying}
+              isActive={isPlaying && !showResult}
               startTime={gameStartTime}
               onSwap={handleSwap}
               onComplete={handleComplete}
@@ -192,14 +202,24 @@ export function Bottle() {
                 <p>难度: {DIFFICULTY_CONFIG[difficulty].label}（{bottleCount}个瓶子）</p>
               </div>
             </div>
-            <motion.button
-              onClick={handleStart}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
-            >
-              再玩一次
-            </motion.button>
+            <div className="flex gap-3">
+              <motion.button
+                onClick={handleStart}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg"
+              >
+                再玩一次
+              </motion.button>
+              <motion.button
+                onClick={handlePlayAgain}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-3 bg-surface-container-high text-foreground rounded-xl font-semibold hover:bg-surface-container-highest transition-all shadow-lg"
+              >
+                选难度
+              </motion.button>
+            </div>
           </motion.div>
         )}
       </div>
