@@ -3,6 +3,15 @@ import { useSettingsStore } from '../stores/settingsStore';
 
 export type SoundEffect = 'correct' | 'wrong' | 'complete' | 'tick';
 
+// 模块级共享 AudioContext 单例：所有调用 useAudio() 的组件复用同一个，
+// 避免每个 hook 实例各建一个 context 增加资源占用、触发浏览器并发限制。
+let sharedAudioCtx: AudioContext | null = null;
+
+// 仅测试用：重置模块级单例，避免测试用例间状态串扰。
+export function __resetSharedAudioContextForTest(): void {
+  sharedAudioCtx = null;
+}
+
 // 每种音效的合成参数。
 // 用渐入渐出的 ADSR 包络替代原来的「硬开关」，避免咔哒爆音；
 // 选用更柔和的正弦/三角波，频率落在人耳舒适的中频段。
@@ -68,14 +77,14 @@ const TONE_PRESETS: Record<SoundEffect, ToneSpec> = {
 export function useAudio() {
   const { soundEnabled, ttsEnabled } = useSettingsStore();
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  // 复用单个 AudioContext，避免每次播放都新建/泄漏
-  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     synthRef.current = window.speechSynthesis;
   }, []);
 
-  // AudioContext 必须在用户手势后才能正常 resume，这里延迟创建并尝试恢复
+  // AudioContext 必须在用户手势后才能正常 resume，这里延迟创建并尝试恢复。
+  // 用模块级单例（而非 useRef）：多个组件各自调用 useAudio() 也共享同一个 AudioContext，
+  // 否则会创建多个 context 增加资源占用、触发浏览器并发限制。
   const getAudioContext = useCallback((): AudioContext | null => {
     if (typeof window === 'undefined') return null;
     const Ctor =
@@ -83,15 +92,14 @@ export function useAudio() {
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return null;
 
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new Ctor();
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new Ctor();
     }
-    const ctx = audioCtxRef.current;
     // 部分浏览器会以 suspended 状态启动，播放前尝试恢复
-    if (ctx.state === 'suspended') {
-      void ctx.resume();
+    if (sharedAudioCtx.state === 'suspended') {
+      void sharedAudioCtx.resume();
     }
-    return ctx;
+    return sharedAudioCtx;
   }, []);
 
   // 播放单个 tone（基础频率 + 可选泛音），统一应用 ADSR 包络
