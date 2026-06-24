@@ -15,6 +15,8 @@ function createMockAudioContext() {
     resumeCalls: 0,
     currentTime: 0,
     state: 'running' as AudioContextState,
+    // 记录所有 linearRamp/exponentialRamp 传入的增益值（含峰值与渐出值）
+    gainValues: [] as number[],
   };
 
   class MockAudioContext {
@@ -54,8 +56,10 @@ function createMockAudioContext() {
       const node = {
         gain: {
           setValueAtTime: vi.fn(),
-          linearRampToValueAtTime: vi.fn(),
-          exponentialRampToValueAtTime: vi.fn(),
+          // linearRampToValueAtTime 设置包络峰值，记录所有传入的增益值供测试断言
+          linearRampToValueAtTime: vi.fn((v: number) => { created.gainValues.push(v); }),
+          exponentialRampToValueAtTime: vi.fn((v: number) => { created.gainValues.push(v); }),
+          rampCallCount: 0,
         },
         connect: vi.fn((target: unknown) => {
           created.connectCalls += 1;
@@ -133,10 +137,9 @@ describe('useAudio', () => {
     expect(mock.created.startCalls).toBeGreaterThan(0);
   });
 
-  it('音效参数采用柔和配置（峰值音量低于原来的 0.3）', () => {
-    // 原实现 correct/wrong/complete 都用 0.3 的固定增益，过于刺耳。
-    // 新实现的包络峰值应明显更低。这里通过快照间接验证：exponentialRampToValueAtTime
-    // 在 release 阶段会被调用以实现渐出（消除咔哒爆音）。
+  it('音效参数采用柔和配置（峰值音量低于原来的 0.3，且有 ADSR 包络）', () => {
+    // 原实现用 0.3 固定增益且无包络（硬开关，咔哒爆音）。
+    // 新实现应有渐入(linearRamp 到峰值) + 渐出(exponentialRamp 到 0)，且峰值 < 0.3。
     const { result } = renderHook(() => useAudio());
 
     act(() => {
@@ -144,9 +147,15 @@ describe('useAudio', () => {
     });
 
     expect(mock.created.instances).toBe(1);
-    expect(mock.created.oscCount).toBeGreaterThan(0);
-    // 至少触发了渐入与渐出包络
     expect(mock.created.gainCount).toBeGreaterThan(0);
+    // 包络方法被调用：渐入 + 渐出
+    expect(mock.created.gainValues.length).toBeGreaterThan(0);
+    // 峰值增益应明显低于原 0.3（tick 预设 gain=0.07）
+    const peakGain = Math.max(...mock.created.gainValues);
+    expect(peakGain).toBeLessThan(0.3);
+    // 渐出到接近 0（exponentialRamp 到 0.0001）
+    const minGain = Math.min(...mock.created.gainValues);
+    expect(minGain).toBeLessThanOrEqual(0.001);
   });
 
   it('在缺少 AudioContext 的环境（如 SSR/老浏览器）下不抛错', () => {
