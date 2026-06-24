@@ -60,21 +60,24 @@
 
 /* Material Symbols 图标：使用自托管的 @fontsource-variable 字体
    （font-family 带 "Variable" 后缀）。原 Google Fonts CDN 用的类名
-   .material-symbols-outlined 在此显式绑定到本地字体，并启用连字以渲染图标字形。 */
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined Variable';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
+   .material-symbols-outlined 在此显式绑定到本地字体，并启用连字以渲染图标字形。
+   放在 @layer components 中，让 Tailwind utility（如 text-xs 改字号）能正常覆盖。 */
+@layer components {
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined Variable';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 /* Base styles */
