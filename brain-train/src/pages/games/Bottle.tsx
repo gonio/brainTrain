@@ -51,14 +51,16 @@ export function Bottle() {
   const isPaused = status === 'paused';
   const isIdle = status === 'idle';
 
-  // 计时器：仅 playing 阶段运行
+  // 计时器：仅 playing 阶段、且未完成时运行。
+  // endGame 是异步的，status 在其 resolve 前仍为 playing；用 showResult 作为
+  // 同步的「已完成」标志让计时器立即停，避免用时持续上涨。
   useEffect(() => {
-    if (!isPlaying || gameStartTime === 0) return;
+    if (!isPlaying || gameStartTime === 0 || showResult) return;
     const interval = setInterval(() => {
       setElapsedTime((Date.now() - gameStartTime) / 1000);
     }, 100);
     return () => clearInterval(interval);
-  }, [isPlaying, gameStartTime]);
+  }, [isPlaying, gameStartTime, showResult]);
 
   const handleStart = useCallback(() => {
     startGame('bottle');
@@ -123,8 +125,8 @@ export function Bottle() {
     <>
       <GameControlBar
         title="暗瓶排列"
-        showTimer={isPlaying}
-        elapsedTime={Math.floor(elapsedTime)}
+        showTimer={isPlaying || showResult}
+        elapsedTime={Math.floor(showResult ? finalTime : elapsedTime)}
       />
 
       <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
@@ -168,7 +170,7 @@ export function Bottle() {
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">用时</span>
-                <span className="text-foreground text-2xl font-bold font-headline">{Math.floor(elapsedTime)}s</span>
+                <span className="text-foreground text-2xl font-bold font-headline">{Math.floor(showResult ? finalTime : elapsedTime)}s</span>
               </div>
             </div>
           </div>
