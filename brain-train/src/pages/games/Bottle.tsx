@@ -18,11 +18,17 @@ const DIFFICULTY_CONFIG = {
   hard: { count: 9, label: '困难' },
 } as const;
 
-// 基准时间（秒）和惩罚系数按难度设定
-const SCORING_CONFIG: Record<Difficulty, { baselineTime: number; stepPenalty: number; timeDecay: number }> = {
-  easy:   { baselineTime: 30,  stepPenalty: 15, timeDecay: 1.0 },
-  medium: { baselineTime: 60,  stepPenalty: 10, timeDecay: 0.5 },
-  hard:   { baselineTime: 120, stepPenalty: 8,  timeDecay: 0.3 },
+// 计分配置：按难度调整。整体偏宽松——封顶更高、步数惩罚更轻、时限基准更宽，
+// 避免随机初始排列带来的运气成分让分数过于严苛。
+const SCORING_CONFIG: Record<Difficulty, {
+  baselineTime: number;   // 基准时间（秒），低于此不扣时间分
+  stepPenalty: number;    // 每多 1 步（相对最优）扣多少分
+  timeDecay: number;      // 超过基准后每秒扣多少分
+  maxScore: number;       // 封顶分数
+}> = {
+  easy:   { baselineTime: 30,  stepPenalty: 8,  timeDecay: 0.5, maxScore: 150 },
+  medium: { baselineTime: 60,  stepPenalty: 6,  timeDecay: 0.3, maxScore: 200 },
+  hard:   { baselineTime: 120, stepPenalty: 4,  timeDecay: 0.2, maxScore: 300 },
 };
 
 export function Bottle() {
@@ -33,6 +39,9 @@ export function Bottle() {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [gameStartTime, setGameStartTime] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  // 完成瞬间冻结的最终用时。endGame 是异步的，期间 status 仍是 playing，
+  // 若不冻结，计时器会继续把 elapsedTime 往上推，导致结果页用时显示还在涨。
+  const [finalTime, setFinalTime] = useState(0);
   const [totalSwaps, setTotalSwaps] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
@@ -42,7 +51,7 @@ export function Bottle() {
   const isPaused = status === 'paused';
   const isIdle = status === 'idle';
 
-  // 计时器
+  // 计时器：仅 playing 阶段运行
   useEffect(() => {
     if (!isPlaying || gameStartTime === 0) return;
     const interval = setInterval(() => {
@@ -55,6 +64,7 @@ export function Bottle() {
     startGame('bottle');
     setGameStartTime(Date.now());
     setElapsedTime(0);
+    setFinalTime(0);
     setTotalSwaps(0);
     setShowResult(false);
     setFinalScore(0);
@@ -73,18 +83,20 @@ export function Bottle() {
     targetSeq: string[],
     playerSeq: string[],
   ) => {
+    // 同步冻结最终用时——避免异步 endGame 期间计时器继续走导致用时虚涨
     const totalTime = (Date.now() - gameStartTime) / 1000;
+    setFinalTime(totalTime);
+
     const config = SCORING_CONFIG[difficulty];
     const bottleCount = DIFFICULTY_CONFIG[difficulty].count;
 
-    // 计分：步数 70% + 时间 30%
+    // 计分：步数 70% + 时间 30%，整体放宽后封顶 maxScore
     const extraSwaps = Math.max(0, swaps - optimalSwaps);
     const stepScore = Math.max(0, 100 - extraSwaps * config.stepPenalty);
     const timeScore = Math.max(0, 100 - Math.max(0, totalTime - config.baselineTime) * config.timeDecay);
-    const score = Math.min(100, Math.round(stepScore * 0.7 + timeScore * 0.3));
+    const score = Math.min(config.maxScore, Math.round((stepScore * 0.7 + timeScore * 0.3) * config.maxScore / 100));
 
-    const accuracy = Math.round((optimalSwaps / Math.max(1, swaps)) * 100);
-
+    // 暗瓶的初始排列是随机的，玩家用多少步受运气影响，准确率（optimal/actual）不具参考意义，故不统计
     const details: TrainingDetails = {
       difficulty,
       bottleCount,
@@ -95,7 +107,7 @@ export function Bottle() {
       completionTime: totalTime,
     };
 
-    endGame({ score, accuracy, details });
+    void endGame({ score, accuracy: 0, details });
     setFinalScore(score);
     setLastOptimalSwaps(optimalSwaps);
     setShowResult(true);
@@ -171,10 +183,10 @@ export function Bottle() {
           >
             <div className="p-6 bg-surface-container-low rounded-2xl border border-border w-full">
               <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
-              <ScoreBoard score={finalScore} accuracy={Math.round((lastOptimalSwaps / Math.max(1, totalSwaps)) * 100)} />
+              <ScoreBoard score={finalScore} />
               <div className="mt-4 text-center text-sm text-muted-foreground space-y-1">
                 <p>步数: {totalSwaps}（最优: {lastOptimalSwaps}）</p>
-                <p>用时: {elapsedTime.toFixed(1)}秒</p>
+                <p>用时: {finalTime.toFixed(1)}秒</p>
                 <p>难度: {DIFFICULTY_CONFIG[difficulty].label}（{bottleCount}个瓶子）</p>
               </div>
             </div>
