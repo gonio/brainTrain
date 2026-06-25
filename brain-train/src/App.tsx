@@ -13,6 +13,7 @@ import { Schulte } from './pages/games/Schulte';
 import { Stroop } from './pages/games/Stroop';
 import { Sequence } from './pages/games/Sequence';
 import { Bottle } from './pages/games/Bottle';
+import { Quest } from './pages/Quest';
 import { ErrorBoundary } from './components/error-boundary/ErrorBoundary';
 import { Onboarding } from './components/onboarding/Onboarding';
 import { getGreeting } from './lib/greeting';
@@ -126,6 +127,22 @@ function Home() {
             ? '开始你的第一次专注力训练吧！'
             : `已连续训练 ${streak} 天，继续加油！`}
         </p>
+      </section>
+
+      {/* 主线闯关入口 */}
+      <section className="mb-8">
+        <button
+          onClick={() => navigate('/quest')}
+          className="w-full p-6 bg-gradient-to-br from-primary/90 to-primary text-primary-foreground rounded-3xl text-left hover:opacity-95 transition-opacity shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-headline text-2xl font-extrabold mb-1">主线闯关</h2>
+              <p className="text-primary-foreground/80 text-sm">4 个游戏随机串联，由易到难，40 关挑战</p>
+            </div>
+            <span className="material-symbols-outlined text-4xl">arrow_forward</span>
+          </div>
+        </button>
       </section>
 
       {/* Training Modes Grid */}
@@ -274,6 +291,7 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <Home /> },
+      { path: 'quest', element: <Quest /> },
       { path: 'stats', element: <Stats /> },
       { path: 'insights', element: <Insights /> },
       { path: 'settings', element: <Settings /> },
