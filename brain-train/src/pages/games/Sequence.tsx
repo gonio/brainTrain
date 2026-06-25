@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -24,6 +24,8 @@ export function Sequence() {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [showResult, setShowResult] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [gameStartTime, setGameStartTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [gameResult, setGameResult] = useState<{
     sequence: string[];
     userSequence: string[];
@@ -35,8 +37,19 @@ export function Sequence() {
   const isIdle = status === 'idle';
   const config = DIFFICULTY_CONFIG[difficulty];
 
+  // 计时器：playing 时每 100ms 更新已用时间
+  useEffect(() => {
+    if (!isPlaying || gameStartTime === 0) return;
+    const interval = setInterval(() => {
+      setElapsedTime((Date.now() - gameStartTime) / 1000);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isPlaying, gameStartTime]);
+
   const handleStart = useCallback(() => {
     startGame('sequence');
+    setGameStartTime(Date.now());
+    setElapsedTime(0);
     setShowResult(false);
     setFinalScore(0);
     setGameResult(null);
@@ -105,7 +118,7 @@ export function Sequence() {
 
   return (
     <>
-      <GameControlBar title="序列记忆" showTimer={isPlaying} elapsedTime={0} />
+      <GameControlBar title="序列记忆" showTimer={isPlaying} elapsedTime={Math.floor(elapsedTime)} />
       <div className="max-w-2xl mx-auto px-6 pt-4 pb-32 flex flex-col" style={{ minHeight: 'calc(100vh - 140px)' }}>
         {/* 游戏开始页面 */}
         {isIdle && !showResult && (
