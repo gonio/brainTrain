@@ -47,15 +47,12 @@ describe('BottleGame 组件', () => {
     onComplete: vi.fn(),
   };
 
-  it('渲染上排可见瓶子 + 下排隐藏瓶子（数量 = bottleCount×2）', () => {
+  it('渲染上排可见瓶子（数量 = bottleCount）', () => {
     render(<BottleGame {...baseProps} />);
-    // 下排隐藏瓶显示「?」
-    const hidden = screen.getAllByText('?');
-    expect(hidden).toHaveLength(4);
-    // 按钮区域（上排瓶子是可点击 div，下排无按钮）
+    // 游戏区域存在
     const gameArea = document.querySelector('.touch-none');
     expect(gameArea).not.toBeNull();
-    // data-slot 数量 = bottleCount
+    // data-slot 数量 = bottleCount（下排灰瓶已移除，仅上排可交互瓶子有 slot）
     const slots = document.querySelectorAll('[data-slot]');
     expect(slots).toHaveLength(4);
   });
@@ -80,6 +77,5 @@ describe('BottleGame 组件', () => {
   it('bottleCount=9（困难）渲染 9 个 slot', () => {
     render(<BottleGame {...baseProps} bottleCount={9} />);
     expect(document.querySelectorAll('[data-slot]')).toHaveLength(9);
-    expect(screen.getAllByText('?')).toHaveLength(9);
   });
 });
