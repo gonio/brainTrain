@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import type { StroopQuestion } from '@/types';
 
@@ -25,15 +25,47 @@ interface StroopGameProps {
   onAnswer: (question: StroopQuestion) => void;
   currentQuestion: number;
   totalQuestions: number;
+  mode?: 'standard' | 'reverse' | 'dual';    // standard=选颜色(默认)/reverse=选字义/dual=每题随机
+  timePerQuestion?: number;                   // 每题限时秒数（默认无限制）
 }
 
 export function StroopGame({
   isActive,
   onAnswer,
   currentQuestion,
-  totalQuestions
+  totalQuestions,
+  mode = 'standard',
+  timePerQuestion,
 }: StroopGameProps) {
   const [questionStartTime, setQuestionStartTime] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  // 本题的判断规则（dual 模式每题随机；standard/reverse 固定）
+  const rule = useMemo<'standard' | 'reverse'>(() => {
+    if (mode === 'dual') return Math.random() < 0.5 ? 'standard' : 'reverse';
+    return mode;
+  }, [mode, currentQuestion]);
+
+  // 每题限时（currentQuestion 变化即新题）：超时算错
+  useEffect(() => {
+    if (!timePerQuestion || !isActive) {
+      setTimeLeft(null);
+      return;
+    }
+    setTimeLeft(timePerQuestion);
+    const timer = setTimeout(() => {
+      // 超时算错
+      onAnswer({
+        word: current.word,
+        wordColor: current.wordColorName,
+        userAnswer: '',
+        reactionTime: timePerQuestion * 1000,
+        isCorrect: false,
+      });
+    }, timePerQuestion * 1000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestion, timePerQuestion]);
 
   // 生成当前题目
   const current = useMemo(() => {
@@ -64,7 +96,9 @@ export function StroopGame({
     if (!isActive) return;
 
     const reactionTime = Date.now() - questionStartTime;
-    const isCorrect = selectedColorName === current.wordColorName;
+    // standard: 答案是文字显示的颜色名；reverse: 答案是文字本身的字面名
+    const correctAnswer = rule === 'standard' ? current.wordColorName : current.word;
+    const isCorrect = selectedColorName === correctAnswer;
 
     onAnswer({
       word: current.word,
@@ -73,7 +107,7 @@ export function StroopGame({
       reactionTime,
       isCorrect,
     });
-  }, [current, isActive, onAnswer, questionStartTime]);
+  }, [current, isActive, onAnswer, questionStartTime, rule]);
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -103,7 +137,13 @@ export function StroopGame({
         </div>
         {/* 提示文字 */}
         <p className="text-center text-xs text-muted-foreground mt-3">
-          忽略文字含义，选择<span className="font-bold text-foreground">文字的颜色</span>
+          {rule === 'standard'
+            ? <>忽略文字含义，选择<span className="font-bold text-foreground">文字的颜色</span></>
+            : <>忽略文字颜色，选择<span className="font-bold text-foreground">文字的含义</span></>
+          }
+          {timePerQuestion && timeLeft !== null && timeLeft > 0 && (
+            <span className="ml-2 font-mono font-bold text-primary">{timeLeft}s</span>
+          )}
         </p>
       </div>
 
