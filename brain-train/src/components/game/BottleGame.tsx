@@ -32,9 +32,10 @@ interface BottleGameProps {
   startTime: number;
   onSwap: (matchCount: number) => void;
   onComplete: (totalSwaps: number, optimalSwaps: number, targetSeq: string[], playerSeq: string[]) => void;
+  timeLimit?: number;  // 限时秒数（默认无限制）
 }
 
-export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplete }: BottleGameProps) {
+export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplete, timeLimit }: BottleGameProps) {
   const [playerSequence, setPlayerSequence] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [matchCount, setMatchCount] = useState(0);
@@ -79,6 +80,32 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
     dragInfoRef.current = null;
     completedRef.current = false;
   }, [startTime]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 限时模式倒计时：超时按当前状态强制完成（未达成也算完成，只是星级低）
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isActive || !timeLimit || completedRef.current) {
+      setTimeLeft(null);
+      return;
+    }
+    setTimeLeft(timeLimit);
+    const interval = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t === null) return null;
+        if (t <= 1) {
+          clearInterval(interval);
+          if (!completedRef.current) {
+            completedRef.current = true;
+            onComplete(swapCountRef.current, optimal, target, playerSequence);
+          }
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, timeLimit]);
 
   // 交换两个位置的瓶子
   const swapBottles = useCallback((indexA: number, indexB: number) => {
@@ -218,7 +245,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
       onPointerCancel={handlePointerCancel}
       onLostPointerCapture={handlePointerCancel}
     >
-      {/* 匹配计数 */}
+      {/* 匹配计数 + 限时倒计时 */}
       <div className="text-center">
         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1 block">
           匹配
@@ -226,6 +253,11 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
         <span className="text-3xl font-black font-headline text-primary">
           {matchCount}<span className="text-lg text-muted-foreground">/{bottleCount}</span>
         </span>
+        {timeLeft !== null && timeLimit && (
+          <span className="block mt-1 font-mono font-bold text-sm text-muted-foreground">
+            剩余 {timeLeft}s
+          </span>
+        )}
       </div>
 
       {/* 上排 - 可见瓶子（玩家操作） */}
@@ -273,26 +305,6 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
                 }}
               />
             </motion.div>
-          </div>
-        ))}
-      </div>
-
-      {/* 下排 - 隐藏瓶子 */}
-      <div className="flex justify-center items-start" style={{ gap }}>
-        {target.map((_, index) => (
-          <div
-            key={`hidden-${index}`}
-            className="relative rounded-2xl overflow-hidden"
-            style={{
-              width: bottleWidth,
-              height: bottleHeight,
-              background: 'linear-gradient(135deg, rgba(148,163,184,0.15) 0%, rgba(71,85,105,0.25) 100%)',
-              border: '1px dashed rgba(148,163,184,0.3)',
-            }}
-          >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-slate-400/30" style={{ fontSize: bottleCount <= 4 ? 20 : 14 }}>?</span>
-            </div>
           </div>
         ))}
       </div>
