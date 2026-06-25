@@ -45,6 +45,18 @@ export function SequenceGame({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userSequence, setUserSequence] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  // 新局开始时重置所有内部状态（isActive false→true 触发）
+  // 解决：再玩一次卡住、超时残留、连续局 state 污染
+  useEffect(() => {
+    if (!isActive) return;
+    setPhase('memorize');
+    setCurrentIndex(0);
+    setUserSequence([]);
+    setSelectedItems(new Set());
+    setTimeLeft(null);
+  }, [isActive]);
 
   // 生成序列（确保不重复）
   const sequence = useMemo(() => {
@@ -86,8 +98,6 @@ export function SequenceGame({
   }, [isActive, phase, displayMode, currentIndex, sequence.length, handleMemorizeComplete]);
 
   // 回忆阶段总倒计时（answerTimeLimit 存在时启用）。超时按当前已选序列结算
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-
   useEffect(() => {
     if (phase !== 'recall' || !answerTimeLimit) return;
     setTimeLeft(answerTimeLimit);
