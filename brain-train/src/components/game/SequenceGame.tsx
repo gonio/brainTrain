@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // 可用物品池（emoji）
@@ -69,6 +69,21 @@ export function SequenceGame({
     setPhase('recall');
     setCurrentIndex(0);
   }, []);
+
+  // step 模式记忆阶段推进：每个 item 显示 800ms 后进入下一个，最后一个再停 1s 后进回忆
+  useEffect(() => {
+    if (phase !== 'memorize' || displayMode === 'flash') return;
+    const isLast = currentIndex >= sequence.length - 1;
+    const delay = isLast ? 1800 : 800; // 最后一个多停 1s 供记忆
+    const timer = setTimeout(() => {
+      if (isLast) {
+        handleMemorizeComplete();
+      } else {
+        setCurrentIndex((prev) => prev + 1);
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [phase, displayMode, currentIndex, sequence.length, handleMemorizeComplete]);
 
   // 回忆阶段总倒计时（answerTimeLimit 存在时启用）。超时按当前已选序列结算
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -182,31 +197,15 @@ export function SequenceGame({
             {displayMode === 'flash' ? (
               <FlashMemorize sequence={sequence} onDone={handleMemorizeComplete} />
             ) : (
-              <AnimatePresence mode="wait">
-                {sequence.slice(0, currentIndex + 1).map((item, index) => (
-                  index === currentIndex && (
-                    <motion.span
-                      key={`${item}-${index}`}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="text-8xl"
-                      onAnimationComplete={() => {
-                        setTimeout(() => {
-                          if (currentIndex < sequence.length - 1) {
-                            setCurrentIndex(prev => prev + 1);
-                          } else {
-                            setTimeout(handleMemorizeComplete, 1000);
-                          }
-                        }, 800);
-                      }}
-                    >
-                      {item}
-                    </motion.span>
-                  )
-                ))}
-              </AnimatePresence>
+              <motion.span
+                key={currentIndex}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="text-8xl"
+              >
+                {sequence[currentIndex]}
+              </motion.span>
             )}
           </div>
           <p className="text-center text-sm text-muted-foreground">
