@@ -1,5 +1,6 @@
 import { db } from './index';
 import type { UserProfile, TrainingRecord, DailyGoal, TrainingMode, Statistics, SchulteQuestProgress } from '../types';
+import type { QuestProgress } from '../types/quest';
 import { normalizeSchulteDetails } from '../lib/normalizeDetails';
 
 const defaultUserProfile: UserProfile = {
@@ -194,4 +195,26 @@ export async function getQuestProgress(): Promise<SchulteQuestProgress> {
 // 保存闯关进度（同主键 put = upsert）
 export async function saveQuestProgress(progress: SchulteQuestProgress): Promise<void> {
   await db.schulteQuestProgress.put(progress);
+}
+
+// ──────────────────────────────────────────────────────────────
+// 主线闯关进度（Quest Mode）：独立于舒尔特闯关，singleton 主键，使用 put
+// ──────────────────────────────────────────────────────────────
+
+export function createInitialQuestProgress(): QuestProgress {
+  return {
+    id: 'singleton',
+    progress: { schulte: 0, sequence: 0, stroop: 0, bottle: 0 },
+    stars: {},
+    completed: false,
+  };
+}
+
+export async function getQuestProgressRecord(): Promise<QuestProgress> {
+  const record = await db.questProgress.get('singleton');
+  return record ?? createInitialQuestProgress();
+}
+
+export async function saveQuestProgressRecord(progress: QuestProgress): Promise<void> {
+  await db.questProgress.put(progress);
 }
