@@ -11,23 +11,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-          cache: 'pnpm'
-          cache-dependency-path: brain-train/pnpm-lock.yaml
+          cache: 'npm'
+          cache-dependency-path: brain-train/package-lock.json
 
       - name: Install and build
         working-directory: brain-train
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
+          npm ci
+          npm run build
 
       - name: Clear remote directory
         uses: appleboy/ssh-action@v1.0.0
