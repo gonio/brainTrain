@@ -227,24 +227,37 @@ interface QuestResult {
 3. 监听原组件完成回调，翻译成 `QuestResult`。
 4. 调用主线 `onQuestComplete(questResult)`。
 
-### 6.4 原组件增强清单
+### 6.4 各游戏流程架构差异（影响 Runner 设计）
+
+四个游戏的「完成流程」位置不同，Runner 必须据此适配：
+
+| 游戏 | 完成流程所在 | Runner 策略 |
+|---|---|---|
+| Schulte | `SchulteGrid` 组件内部（`onComplete(combo, errors, time)`）| 直接包裹组件，监听 onComplete |
+| Sequence | `SequenceGame` 组件内部（`onComplete({positionAccuracy, itemAccuracy})`）| 直接包裹组件 |
+| Bottle | `BottleGame` 组件内部（`onComplete(totalSwaps, optimalSwaps, target, player)`）| 直接包裹组件 |
+| **Stroop** | **`Stroop.tsx` 页面层**（组件只渲染单题，`onAnswer` 回传父级，父级管题目计数/结束）| **Runner 须自带流程管理**：复用 Stroop.tsx 的题目循环逻辑，内部管理 currentQuestion/结束，渲染 `StroopGame` 单题组件 |
+
+### 6.5 原组件增强清单（纯增量，自由模式零回归）
 
 | 组件 | 新增 prop | 默认值（自由模式行为） |
 |---|---|---|
 | `SequenceGame` | `distractors?: number`、`displayMode?: 'step' \| 'flash'`、`answerTimeLimit?: number` | 0 / step / undefined（无限制） |
-| `StroopGame` | `mode?: 'standard' \| 'reverse' \| 'dual'`、`timePerQuestion?: number`、`onComplete?` | standard / undefined（无限制）/ 内部闭环 |
+| `StroopGame` | `mode?: 'standard' \| 'reverse' \| 'dual'`、`timePerQuestion?: number` | standard / undefined（无限制） |
 | `BottleGame` | `timeLimit?: number` | undefined（无限制）+ 删下排 JSX |
 
 `SchulteGrid` 无需改动（现有 `gridSize` / `direction` / `timeLimitPerNumber` / `lives` / `onComplete(combo, errors, time)` 已覆盖全部 10 级参数）。
 
-### 6.5 Runner 完成回调翻译
+注：`StroopGame` 不加 `onComplete`——它本就只渲染单题，完成判定由调用方（自由模式的 `Stroop.tsx` 或主线的 `QuestStroopRunner`）管理。
 
-| Runner | 监听原组件回调 | 翻译为 QuestResult |
+### 6.6 Runner 完成回调翻译
+
+| Runner | 完成来源 | 翻译为 QuestResult |
 |---|---|---|
-| Schulte | `onComplete(combo, errors, time)` | stars = `computeStars(...)`，score 由 `computeScore` |
-| Sequence | `onComplete({positionAccuracy, itemAccuracy})` | 准确率 = position×0.6 + item×0.4 → 星级阈值 |
-| Stroop | `onComplete({correctCount, questionCount})` | 准确率 = correct/count → 星级阈值 |
-| Bottle | `onComplete(swaps, optimal)` | 星级看 swaps vs optimal |
+| Schulte | 组件 `onComplete(combo, errors, time)` | stars = `computeStars(...)`，score 由 `computeScore` |
+| Sequence | 组件 `onComplete({positionAccuracy, itemAccuracy})` | 准确率 = position×0.6 + item×0.4 → 星级阈值 |
+| Stroop | Runner 内部流程跑完所有题后汇总 | 准确率 = correct/count → 星级阈值 |
+| Bottle | 组件 `onComplete(swaps, optimal)` | 星级看 swaps vs optimal |
 
 ## 7. 页面结构与 UX
 
