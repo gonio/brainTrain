@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -28,12 +28,18 @@ interface SequenceGameProps {
     itemAccuracy: number;
   }) => void;
   isActive: boolean;
+  displayMode?: 'step' | 'flash';    // step=逐个亮起（默认），flash=整段闪现
+  distractors?: number;              // 回忆阶段混入的错误选项数（默认 0）
+  answerTimeLimit?: number;          // 回忆阶段总限时秒数（默认无限制）
 }
 
 export function SequenceGame({
   sequenceLength,
   onComplete,
-  isActive
+  isActive,
+  displayMode = 'step',
+  distractors = 0,
+  answerTimeLimit,
 }: SequenceGameProps) {
   const [phase, setPhase] = useState<GamePhase>('memorize');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,16 +52,54 @@ export function SequenceGame({
     return shuffled.slice(0, sequenceLength);
   }, [sequenceLength, isActive]);
 
-  // 打乱后的选项（用于回忆阶段）
+  // 打乱后的选项（用于回忆阶段）。distractors>0 时从池中混入错误选项作干扰
   const shuffledOptions = useMemo(() => {
-    return [...sequence].sort(() => Math.random() - 0.5);
-  }, [sequence]);
+    const baseOptions = [...sequence];
+    if (distractors > 0) {
+      const used = new Set(sequence);
+      const pool = ITEMS_POOL.filter((item) => !used.has(item));
+      const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
+      baseOptions.push(...shuffledPool.slice(0, distractors));
+    }
+    return baseOptions.sort(() => Math.random() - 0.5);
+  }, [sequence, distractors]);
 
   // 记忆阶段动画
   const handleMemorizeComplete = useCallback(() => {
     setPhase('recall');
     setCurrentIndex(0);
   }, []);
+
+  // 回忆阶段总倒计时（answerTimeLimit 存在时启用）。超时按当前已选序列结算
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (phase !== 'recall' || !answerTimeLimit) return;
+    setTimeLeft(answerTimeLimit);
+    const interval = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t === null) return null;
+        if (t <= 1) {
+          clearInterval(interval);
+          // 超时：按当前已选序列结算（未选满的位置算错）
+          let positionCorrect = 0;
+          let itemCorrect = 0;
+          const itemSet = new Set(sequence);
+          userSequence.forEach((item, index) => {
+            if (item === sequence[index]) positionCorrect++;
+            if (itemSet.has(item)) itemCorrect++;
+          });
+          const positionAccuracy = Math.round((positionCorrect / sequence.length) * 100);
+          const itemAccuracy = Math.round((itemCorrect / sequence.length) * 100);
+          onComplete({ sequence, userSequence, positionAccuracy, itemAccuracy });
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, answerTimeLimit]);
 
   // 处理用户选择
   const handleItemSelect = useCallback((item: string) => {
@@ -114,7 +158,9 @@ export function SequenceGame({
           </span>
           <span>
             {phase === 'memorize' && `${Math.min(currentIndex + 1, sequence.length)} / ${sequence.length}`}
-            {phase === 'recall' && `${userSequence.length} / ${sequence.length}`}
+            {phase === 'recall' && (answerTimeLimit && timeLeft !== null && timeLeft > 0
+              ? `${timeLeft}s 剩余`
+              : `${userSequence.length} / ${sequence.length}`)}
           </span>
         </div>
         <div className="h-2 bg-accent rounded-full overflow-hidden">
@@ -133,31 +179,35 @@ export function SequenceGame({
       {phase === 'memorize' && (
         <div className="relative">
           <div className="aspect-square bg-surface-container-low rounded-2xl flex items-center justify-center shadow-inner mb-4">
-            <AnimatePresence mode="wait">
-              {sequence.slice(0, currentIndex + 1).map((item, index) => (
-                index === currentIndex && (
-                  <motion.span
-                    key={`${item}-${index}`}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-8xl"
-                    onAnimationComplete={() => {
-                      setTimeout(() => {
-                        if (currentIndex < sequence.length - 1) {
-                          setCurrentIndex(prev => prev + 1);
-                        } else {
-                          setTimeout(handleMemorizeComplete, 1000);
-                        }
-                      }, 800);
-                    }}
-                  >
-                    {item}
-                  </motion.span>
-                )
-              ))}
-            </AnimatePresence>
+            {displayMode === 'flash' ? (
+              <FlashMemorize sequence={sequence} onDone={handleMemorizeComplete} />
+            ) : (
+              <AnimatePresence mode="wait">
+                {sequence.slice(0, currentIndex + 1).map((item, index) => (
+                  index === currentIndex && (
+                    <motion.span
+                      key={`${item}-${index}`}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-8xl"
+                      onAnimationComplete={() => {
+                        setTimeout(() => {
+                          if (currentIndex < sequence.length - 1) {
+                            setCurrentIndex(prev => prev + 1);
+                          } else {
+                            setTimeout(handleMemorizeComplete, 1000);
+                          }
+                        }, 800);
+                      }}
+                    >
+                      {item}
+                    </motion.span>
+                  )
+                ))}
+              </AnimatePresence>
+            )}
           </div>
           <p className="text-center text-sm text-muted-foreground">
             记住物品出现的顺序
@@ -223,6 +273,30 @@ export function SequenceGame({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// flash 模式记忆阶段：整段序列同时显示 2 秒后结束
+function FlashMemorize({ sequence, onDone }: { sequence: string[]; onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 2000);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+
+  return (
+    <div className="flex flex-wrap justify-center gap-3 p-4 max-w-md">
+      {sequence.map((item, index) => (
+        <motion.span
+          key={`${item}-${index}`}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: index * 0.05 }}
+          className="text-5xl"
+        >
+          {item}
+        </motion.span>
+      ))}
     </div>
   );
 }
