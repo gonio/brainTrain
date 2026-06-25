@@ -72,7 +72,7 @@ export function SequenceGame({
 
   // step 模式记忆阶段推进：每个 item 显示 800ms 后进入下一个，最后一个再停 1s 后进回忆
   useEffect(() => {
-    if (phase !== 'memorize' || displayMode === 'flash') return;
+    if (!isActive || phase !== 'memorize' || displayMode === 'flash') return;
     const isLast = currentIndex >= sequence.length - 1;
     const delay = isLast ? 1800 : 800; // 最后一个多停 1s 供记忆
     const timer = setTimeout(() => {
@@ -83,7 +83,7 @@ export function SequenceGame({
       }
     }, delay);
     return () => clearTimeout(timer);
-  }, [phase, displayMode, currentIndex, sequence.length, handleMemorizeComplete]);
+  }, [isActive, phase, displayMode, currentIndex, sequence.length, handleMemorizeComplete]);
 
   // 回忆阶段总倒计时（answerTimeLimit 存在时启用）。超时按当前已选序列结算
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
