@@ -54,7 +54,8 @@ describe('pickNextGame', () => {
   it('舒尔特 progress=2 时其他游戏也都可选（无副作用）', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 200; i++) {
-      seen.add(pickNextGame({ progress: p(2, 0, 0, 0) }));
+      const r = pickNextGame({ progress: p(2, 0, 0, 0) });
+      if (r) seen.add(r);
     }
     expect(seen.size).toBe(4);
   });
