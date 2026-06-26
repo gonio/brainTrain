@@ -15,9 +15,12 @@ export function QuestSequenceRunner({ difficulty, onComplete }: RunnerProps) {
     userSequence: string[];
     positionAccuracy: number;
     itemAccuracy: number;
+    hasDistractors: boolean;
   }) => {
-    // 准确率 = 位置准确率 60% + 物品准确率 40%（与自由模式评分一致）
-    const accuracy = result.positionAccuracy * 0.6 + result.itemAccuracy * 0.4;
+    // 准确率：有干扰项时 位置 60% + 物品 40%；无干扰项时只看位置准确率（与自由模式一致）
+    const accuracy = result.hasDistractors
+      ? result.positionAccuracy * 0.6 + result.itemAccuracy * 0.4
+      : result.positionAccuracy;
     let stars: 0 | 1 | 2 | 3 = 1;
     if (accuracy >= level.excellentThreshold) stars = 3;
     else if (accuracy >= level.goodThreshold) stars = 2;
