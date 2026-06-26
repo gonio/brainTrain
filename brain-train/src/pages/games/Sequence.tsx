@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { cn } from '../../lib/utils';
 import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAudio } from '../../hooks/useAudio';
@@ -31,6 +32,7 @@ export function Sequence() {
     userSequence: string[];
     positionAccuracy: number;
     itemAccuracy: number;
+    hasDistractors: boolean;
   } | null>(null);
 
   const isPlaying = status === 'playing';
@@ -60,14 +62,17 @@ export function Sequence() {
     userSequence: string[];
     positionAccuracy: number;
     itemAccuracy: number;
+    hasDistractors: boolean;
   }) => {
     setGameResult(result);
 
-    // 0-100 分制：位置准确率 60% + 物品准确率 40%
-    const accuracyScore = result.positionAccuracy * 0.6 + result.itemAccuracy * 0.4;
+    // 评分：有干扰项时 位置 60% + 物品 40%；无干扰项时物品必然全对，只看位置准确率
+    const accuracyScore = result.hasDistractors
+      ? result.positionAccuracy * 0.6 + result.itemAccuracy * 0.4
+      : result.positionAccuracy;
     const score = Math.min(100, Math.round(accuracyScore));
 
-    const accuracy = Math.round((result.positionAccuracy + result.itemAccuracy) / 2);
+    const accuracy = Math.round(accuracyScore);
 
     const details: TrainingDetails = {
       sequenceLength: result.sequence.length,
@@ -166,19 +171,24 @@ export function Sequence() {
           <h3 className="text-lg font-semibold mb-4 text-center font-headline">训练完成！</h3>
           <ScoreBoard
             score={finalScore}
-            accuracy={Math.round((gameResult.positionAccuracy + gameResult.itemAccuracy) / 2)}
+            accuracy={finalScore}
           />
 
-          {/* 详细统计 */}
-          <div className="mt-6 grid grid-cols-2 gap-4">
+          {/* 详细统计：物品准确率仅在有干扰项时才有意义 */}
+          <div className={cn(
+            "mt-6 grid gap-4",
+            gameResult.hasDistractors ? "grid-cols-2" : "grid-cols-1"
+          )}>
             <div className="text-center p-3 bg-accent/50 rounded-xl">
               <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">位置准确率</div>
               <div className="text-2xl font-bold font-headline text-primary">{gameResult.positionAccuracy}%</div>
             </div>
-            <div className="text-center p-3 bg-accent/50 rounded-xl">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">物品准确率</div>
-              <div className="text-2xl font-bold font-headline text-primary">{gameResult.itemAccuracy}%</div>
-            </div>
+            {gameResult.hasDistractors && (
+              <div className="text-center p-3 bg-accent/50 rounded-xl">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">物品准确率</div>
+                <div className="text-2xl font-bold font-headline text-primary">{gameResult.itemAccuracy}%</div>
+              </div>
+            )}
           </div>
 
           {/* 序列对比 */}

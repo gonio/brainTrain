@@ -19,13 +19,48 @@ const ITEMS_POOL = [
 // 游戏阶段
 type GamePhase = 'memorize' | 'recall' | 'result';
 
+// 统一计算本局结果（选满/超时共用）。
+// - 位置准确率：每个位置用户答案 == 正确答案算 1
+// - 物品准确率：仅在有干扰项时有意义（用户是否选到了正确物品）；
+//   无干扰项时选项池 == 序列本身，物品必然全对，恒为 100。
+function computeResult(
+  sequence: string[],
+  userSequence: string[],
+  distractors: number,
+) {
+  let positionCorrect = 0;
+  const itemSet = new Set(sequence);
+  userSequence.forEach((item, index) => {
+    if (item === sequence[index]) positionCorrect++;
+  });
+
+  const positionAccuracy = Math.round((positionCorrect / sequence.length) * 100);
+  const itemAccuracy =
+    distractors > 0
+      ? Math.round(
+          (userSequence.filter((item) => itemSet.has(item)).length /
+            sequence.length) *
+            100,
+        )
+      : 100;
+
+  return {
+    sequence,
+    userSequence,
+    positionAccuracy,
+    itemAccuracy,
+    hasDistractors: distractors > 0,
+  };
+}
+
 interface SequenceGameProps {
   sequenceLength: number;
   onComplete: (result: {
     sequence: string[];
     userSequence: string[];
     positionAccuracy: number;
-    itemAccuracy: number;
+    itemAccuracy: number;          // 有干扰项时才有意义；无干扰项时恒为 100
+    hasDistractors: boolean;       // 本次回忆阶段是否含干扰项（评分依据）
   }) => void;
   isActive: boolean;
   displayMode?: 'step' | 'flash';    // step=逐个亮起（默认），flash=整段闪现
@@ -44,7 +79,6 @@ export function SequenceGame({
   const [phase, setPhase] = useState<GamePhase>('memorize');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userSequence, setUserSequence] = useState<string[]>([]);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   // 新局开始时重置所有内部状态（isActive false→true 触发）
@@ -54,7 +88,6 @@ export function SequenceGame({
     setPhase('memorize');
     setCurrentIndex(0);
     setUserSequence([]);
-    setSelectedItems(new Set());
     setTimeLeft(null);
   }, [isActive]);
 
@@ -82,18 +115,17 @@ export function SequenceGame({
     setCurrentIndex(0);
   }, []);
 
-  // step 模式记忆阶段推进：每个 item 显示 800ms 后进入下一个，最后一个再停 1s 后进回忆
+  // step 模式记忆阶段推进：每个 item 显示 800ms，最后一个播完立即进入回忆阶段
   useEffect(() => {
     if (!isActive || phase !== 'memorize' || displayMode === 'flash') return;
     const isLast = currentIndex >= sequence.length - 1;
-    const delay = isLast ? 1800 : 800; // 最后一个多停 1s 供记忆
     const timer = setTimeout(() => {
       if (isLast) {
         handleMemorizeComplete();
       } else {
         setCurrentIndex((prev) => prev + 1);
       }
-    }, delay);
+    }, 800);
     return () => clearTimeout(timer);
   }, [isActive, phase, displayMode, currentIndex, sequence.length, handleMemorizeComplete]);
 
@@ -107,16 +139,7 @@ export function SequenceGame({
         if (t <= 1) {
           clearInterval(interval);
           // 超时：按当前已选序列结算（未选满的位置算错）
-          let positionCorrect = 0;
-          let itemCorrect = 0;
-          const itemSet = new Set(sequence);
-          userSequence.forEach((item, index) => {
-            if (item === sequence[index]) positionCorrect++;
-            if (itemSet.has(item)) itemCorrect++;
-          });
-          const positionAccuracy = Math.round((positionCorrect / sequence.length) * 100);
-          const itemAccuracy = Math.round((itemCorrect / sequence.length) * 100);
-          onComplete({ sequence, userSequence, positionAccuracy, itemAccuracy });
+          onComplete(computeResult(sequence, userSequence, distractors));
           return 0;
         }
         return t - 1;
@@ -126,41 +149,27 @@ export function SequenceGame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, answerTimeLimit]);
 
-  // 处理用户选择
+  // 处理用户选择（同一物品在无干扰项时可被重复选中——撤销后可选回）
   const handleItemSelect = useCallback((item: string) => {
-    if (phase !== 'recall' || selectedItems.has(item)) return;
+    if (phase !== 'recall') return;
+    if (userSequence.length >= sequence.length) return;
+    // 有干扰项时每个物品只能选一次（去重）；无干扰项时不限制（选项即序列）
+    if (distractors > 0 && userSequence.includes(item)) return;
 
     const newUserSequence = [...userSequence, item];
-    const newSelectedItems = new Set(selectedItems);
-    newSelectedItems.add(item);
-
     setUserSequence(newUserSequence);
-    setSelectedItems(newSelectedItems);
 
-    // 检查是否完成
+    // 选满即结算
     if (newUserSequence.length === sequence.length) {
-      // 计算准确率
-      let positionCorrect = 0;
-      let itemCorrect = 0;
-
-      const itemSet = new Set(sequence);
-
-      newUserSequence.forEach((item, index) => {
-        if (item === sequence[index]) positionCorrect++;
-        if (itemSet.has(item)) itemCorrect++;
-      });
-
-      const positionAccuracy = Math.round((positionCorrect / sequence.length) * 100);
-      const itemAccuracy = Math.round((itemCorrect / sequence.length) * 100);
-
-      onComplete({
-        sequence,
-        userSequence: newUserSequence,
-        positionAccuracy,
-        itemAccuracy,
-      });
+      onComplete(computeResult(sequence, newUserSequence, distractors));
     }
-  }, [phase, selectedItems, userSequence, sequence, onComplete]);
+  }, [phase, userSequence, sequence.length, distractors, onComplete]);
+
+  // 撤销最后一次选择
+  const handleUndo = useCallback(() => {
+    if (phase !== 'recall' || userSequence.length === 0) return;
+    setUserSequence((prev) => prev.slice(0, -1));
+  }, [phase, userSequence.length]);
 
   // 如果游戏不活跃，显示提示
   if (!isActive) {
@@ -229,9 +238,23 @@ export function SequenceGame({
         <div>
           {/* 已选择的序列显示 */}
           <div className="mb-6">
-            <p className="text-xs text-muted-foreground mb-2 text-center">
-              按记忆顺序点击下方物品
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground">
+                按记忆顺序点击下方物品
+              </p>
+              <button
+                onClick={handleUndo}
+                disabled={userSequence.length === 0}
+                className={cn(
+                  "text-xs px-2.5 py-1 rounded-md transition-all flex items-center gap-1",
+                  userSequence.length === 0
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : "text-primary hover:bg-primary/10"
+                )}
+              >
+                ↶ 撤销
+              </button>
+            </div>
             <div className="flex justify-center gap-2 min-h-[60px]">
               {userSequence.map((item, index) => (
                 <motion.div
@@ -259,18 +282,19 @@ export function SequenceGame({
           {/* 选项网格 */}
           <div className="grid grid-cols-5 gap-3">
             {shuffledOptions.map((item) => {
-              const isSelected = selectedItems.has(item);
+              // 有干扰项时已选物品置灰；无干扰项时不限制重复选（撤销后可重新选）
+              const isUsed = distractors > 0 && userSequence.includes(item);
               return (
                 <motion.button
                   key={item}
                   onClick={() => handleItemSelect(item)}
-                  disabled={isSelected}
-                  whileHover={!isSelected ? { scale: 1.1 } : {}}
-                  whileTap={!isSelected ? { scale: 0.95 } : {}}
+                  disabled={isUsed}
+                  whileHover={!isUsed ? { scale: 1.1 } : {}}
+                  whileTap={!isUsed ? { scale: 0.95 } : {}}
                   className={cn(
                     "aspect-square rounded-xl text-3xl flex items-center justify-center",
                     "transition-all duration-200",
-                    isSelected
+                    isUsed
                       ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
                       : "bg-surface-container hover:bg-surface-container-high shadow-md hover:shadow-lg"
                   )}
