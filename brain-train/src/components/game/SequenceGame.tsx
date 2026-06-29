@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -79,6 +79,9 @@ export function SequenceGame({
   const [phase, setPhase] = useState<GamePhase>('memorize');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userSequence, setUserSequence] = useState<string[]>([]);
+  // 跟踪最新 userSequence 的 ref：超时回调（setInterval 闭包）里读取，
+  // 避免用到进入 recall 时的旧空数组（之前 effect 依赖未含 userSequence 导致闭包过期）。
+  const userSeqRef = useRef<string[]>([]);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   // 新局开始时重置所有内部状态（isActive false→true 触发）
@@ -88,6 +91,7 @@ export function SequenceGame({
     setPhase('memorize');
     setCurrentIndex(0);
     setUserSequence([]);
+    userSeqRef.current = [];
     setTimeLeft(null);
   }, [isActive]);
 
@@ -145,8 +149,8 @@ export function SequenceGame({
         if (t === null) return null;
         if (t <= 1) {
           clearInterval(interval);
-          // 超时：按当前已选序列结算（未选满的位置算错）
-          onComplete(computeResult(sequence, userSequence, distractors));
+          // 超时：按最新已选序列结算（用 ref 避免 setInterval 闭包里的旧空数组）
+          onComplete(computeResult(sequence, userSeqRef.current, distractors));
           return 0;
         }
         return t - 1;
@@ -165,6 +169,7 @@ export function SequenceGame({
 
     const newUserSequence = [...userSequence, item];
     setUserSequence(newUserSequence);
+    userSeqRef.current = newUserSequence;
 
     // 选满即结算
     if (newUserSequence.length === sequence.length) {
@@ -175,8 +180,10 @@ export function SequenceGame({
   // 撤销最后一次选择
   const handleUndo = useCallback(() => {
     if (phase !== 'recall' || userSequence.length === 0) return;
-    setUserSequence((prev) => prev.slice(0, -1));
-  }, [phase, userSequence.length]);
+    const next = userSequence.slice(0, -1);
+    setUserSequence(next);
+    userSeqRef.current = next;
+  }, [phase, userSequence]);
 
   // 如果游戏不活跃，显示提示
   if (!isActive) {

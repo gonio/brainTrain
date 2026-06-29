@@ -50,8 +50,11 @@ export function pickNextGame(progress: Pick<QuestProgress, 'progress'>): GameId 
  *     - 4 个 progress 全 10 → completed = true
  */
 export function applyResult(progress: QuestProgress, r: QuestResult): QuestProgress {
-  // 失败：不推进、不记星
-  if (r.passed === false) return progress;
+  // 失败：不推进、不记星。返回字段相同的新对象（保持不可变），
+  // 避免调用方用引用变化驱动更新时（如 React state 的 Object.is 比较）误判为「无更新」。
+  if (r.passed === false) {
+    return { ...progress, progress: { ...progress.progress }, stars: { ...progress.stars } };
+  }
 
   const newGameProgress = Math.max(progress.progress[r.gameId], r.difficulty);
   const key = `${r.gameId}-${r.difficulty}`;

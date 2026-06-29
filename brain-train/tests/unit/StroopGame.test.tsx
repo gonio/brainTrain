@@ -11,8 +11,15 @@
 //   2. reverse 题：选 word(字义) 判对、选 wordColor(显示色) 判错
 //   3. correctAnswer 与规则一致
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, act } from '@testing-library/react';
 import { StroopGame } from '../../src/components/game/StroopGame';
+
+// helper：固定题目数据。控制 wordColorIdx=文字字义、displayColorIdx=显示色
+// Math.random 在题目生成时被调用多次，我们用一个序列让它可预测。
+function fixedRandom(seq: number[]) {
+  let i = 0;
+  Math.random = () => seq[i++ % seq.length];
+}
 
 describe('StroopGame 判定一致性', () => {
   let original: typeof Math.random;
@@ -23,12 +30,6 @@ describe('StroopGame 判定一致性', () => {
     Math.random = original;
   });
 
-  // helper：固定题目数据。控制 wordColorIdx=文字字义、displayColorIdx=显示色
-  // Math.random 在题目生成时被调用多次，我们用一个序列让它可预测。
-  function fixedRandom(seq: number[]) {
-    let i = 0;
-    Math.random = () => seq[i++ % seq.length];
-  }
 
   it('standard 题：选「文字显示的颜色」判对，选「文字字义」判错', () => {
     // 强制题目：word=COLORS[0]=红色（字义），显示色=COLORS[1]=蓝色
@@ -92,6 +93,44 @@ describe('StroopGame 判定一致性', () => {
     const last = onAnswer.mock.calls.at(-1)![0];
     expect(last.isCorrect).toBe(true);
     expect(last.correctAnswer).toBe('红色');
+  });
+});
+
+// 回归：每题限时——timeLeft 每秒递减、超时触发 onAnswer（之前只有 setTimeout，timeLeft 恒为初值）
+describe('StroopGame 每题限时', () => {
+  let originalNow: () => number;
+  beforeEach(() => {
+    originalNow = Date.now;
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    Date.now = originalNow;
+    vi.useRealTimers();
+  });
+
+  it('超时触发 onAnswer（isCorrect=false）', () => {
+    // 固定题目：word="红色"(字义)，显示色蓝色
+    fixedRandom([0.0, 0.2, 0.5]);
+    const onAnswer = vi.fn();
+    render(
+      <StroopGame
+        isActive={true}
+        onAnswer={onAnswer}
+        currentQuestion={0}
+        totalQuestions={3}
+        mode="standard"
+        timePerQuestion={3}
+      />,
+    );
+
+    // 推进 3 秒 → 超时
+    act(() => { vi.advanceTimersByTime(3100); });
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    const last = onAnswer.mock.calls.at(-1)![0];
+    expect(last.isCorrect).toBe(false);
+    expect(last.userAnswer).toBe('');
+    // standard：正确答案 = 显示色 = 蓝色
+    expect(last.correctAnswer).toBe('蓝色');
   });
 });
 

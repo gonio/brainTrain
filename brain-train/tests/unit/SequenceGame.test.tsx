@@ -2,6 +2,41 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, act } from '@testing-library/react';
 import { SequenceGame, ITEMS_POOL } from '../../src/components/game/SequenceGame';
 
+// 回归：回忆阶段超时应用最新 userSequence 结算（而非 setInterval 闭包里的旧空数组）
+describe('SequenceGame 超时结算', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('超时时按已选序列结算，而非进入 recall 时的空数组', () => {
+    const onComplete = vi.fn();
+    const { container } = render(
+      <SequenceGame
+        sequenceLength={2}
+        isActive={true}
+        stepDurationMs={800}
+        answerTimeLimit={5}
+        onComplete={onComplete}
+      />
+    );
+    // 推进到回忆阶段（2 个 item × 800ms）
+    for (let i = 0; i < 2; i++) act(() => { vi.advanceTimersByTime(800); });
+
+    // 在回忆阶段选 1 个（模拟玩家部分作答）
+    const itemButtons = Array.from(container.querySelectorAll('button')).filter(
+      (b) => !b.textContent?.includes('撤销')
+    );
+    act(() => { fireEvent.click(itemButtons[0]); });
+
+    // 推进到超时（5 秒）
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    const result = onComplete.mock.calls[0][0];
+    // userSequence 应含已选的 1 个（而非旧的空数组）
+    expect(result.userSequence.length).toBe(1);
+  });
+});
+
 // SequenceGame 状态机测试：聚焦 isActive 流转和重置
 // 复现"再玩一次卡住"的 bug
 

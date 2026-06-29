@@ -43,6 +43,9 @@ interface BottleGameProps {
 
 export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplete, timeLimit }: BottleGameProps) {
   const [playerSequence, setPlayerSequence] = useState<string[]>([]);
+  // 跟踪最新 playerSequence 的 ref：超时回调（setInterval 闭包）里读取，
+  // 避免用到开局时的旧序列（倒计时期间玩家交换后，闭包里的 playerSequence 过期）。
+  const playerSeqRef = useRef<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [matchCount, setMatchCount] = useState(0);
   // 拖拽态：坐标 + 源格子索引。作为 state 而非 ref，render 时不读 ref（符合 react-hooks/refs）。
@@ -78,6 +81,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
   // 重置状态
   useEffect(() => {
     setPlayerSequence(initialPlayer);
+    playerSeqRef.current = initialPlayer;
     setMatchCount(countMatches(target, initialPlayer));
     swapCountRef.current = 0;
     setSelectedIndex(null);
@@ -103,8 +107,8 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
           if (!completedRef.current) {
             completedRef.current = true;
             // 超时且未完成（玩家序列未排成目标顺序）→ 上抛标志
-            const incomplete = countMatches(target, playerSequence) !== bottleCount;
-            onComplete(swapCountRef.current, optimal, target, playerSequence, incomplete);
+            const incomplete = countMatches(target, playerSeqRef.current) !== bottleCount;
+            onComplete(swapCountRef.current, optimal, target, playerSeqRef.current, incomplete);
           }
           return 0;
         }
@@ -123,6 +127,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
     [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
 
     setPlayerSequence(next);
+    playerSeqRef.current = next;
     setSelectedIndex(null);
     selectedRef.current = null;
 
