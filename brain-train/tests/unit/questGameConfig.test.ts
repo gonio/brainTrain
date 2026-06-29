@@ -47,6 +47,15 @@ describe('questGameConfig 难度表完整性', () => {
     });
   });
 
+  it('Sequence/Stroop 满星门槛=100（全对才 3 星，错一个不能满星）', () => {
+    // 这些是「对/错题」语义的游戏，满星要求零失误。
+    (['sequence', 'stroop'] as const).forEach((g) => {
+      DIFFICULTY_TABLES[g].forEach((level) => {
+        expect(level.excellentThreshold).toBe(100);
+      });
+    });
+  });
+
   it('getDifficulty 返回正确难度', () => {
     expect(getDifficulty('schulte', 1).difficulty).toBe(1);
     expect(getDifficulty('schulte', 10).difficulty).toBe(10);

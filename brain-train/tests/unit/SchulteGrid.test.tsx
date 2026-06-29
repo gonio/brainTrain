@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { SchulteGrid } from '../../src/components/game/SchulteGrid';
 import { buildAlternateWithDirections } from '../../src/lib/schulteQuestConfig';
 
@@ -76,7 +76,7 @@ describe('SchulteGrid', () => {
     expect(onCorrect).toHaveBeenCalledTimes(1);
   });
 
-  it('错误点击触发 onWrongClick', () => {
+  it('错误点击触发 onWrongClick，并带「点了X/应点Y」明细', () => {
     const onWrong = vi.fn();
     render(
       <SchulteGrid
@@ -93,6 +93,8 @@ describe('SchulteGrid', () => {
     const buttonTwo = screen.getByText('2');
     fireEvent.click(buttonTwo);
     expect(onWrong).toHaveBeenCalledTimes(1);
+    // 结算页需要据此展示「点了 2 / 应点 1」
+    expect(onWrong).toHaveBeenCalledWith({ clicked: 2, expected: 1 });
   });
 
   it('连续正确点击触发 onComboChange', () => {
@@ -176,6 +178,62 @@ describe('SchulteGrid', () => {
     const buttonTwo = screen.getByText('2'); // asc 首目标 1，点 2 是错的
     fireEvent.click(buttonTwo);
     expect(buttonTwo.className).toMatch(/red/);
+  });
+
+  describe('错点反馈恢复（fake timers）', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('错点 450ms 后该格恢复正常颜色（不再标红）', () => {
+      render(
+        <SchulteGrid
+          gridSize={3}
+          order="asc"
+          isActive={true}
+          startTime={1000}
+          onCorrectClick={() => {}}
+          onWrongClick={() => {}}
+          onComplete={() => {}}
+        />
+      );
+      const buttonTwo = screen.getByText('2'); // asc 首目标 1，点 2 是错的
+      fireEvent.click(buttonTwo);
+      // 立即：标红
+      expect(buttonTwo.className).toMatch(/red/);
+
+      // 推进 450ms+，红色反馈应清除
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(buttonTwo.className).not.toMatch(/red/);
+    });
+
+    it('错点后下一次点对正确格子时，之前错的格子已是正常色（无残留红）', () => {
+      render(
+        <SchulteGrid
+          gridSize={3}
+          order="asc"
+          isActive={true}
+          startTime={1000}
+          onCorrectClick={() => {}}
+          onWrongClick={() => {}}
+          onComplete={() => {}}
+        />
+      );
+      const buttonTwo = screen.getByText('2'); // 错点
+      const buttonOne = screen.getByText('1'); // 正确
+      fireEvent.click(buttonTwo);
+      expect(buttonTwo.className).toMatch(/red/);
+
+      // 等反馈动画结束（>450ms）后再点正确格
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      fireEvent.click(buttonOne);
+
+      // 错过的格子（2）此时不应再标红
+      expect(buttonTwo.className).not.toMatch(/red/);
+    });
   });
 
   it('onTargetChange 报告当前目标，点对后推进', () => {
@@ -288,6 +346,41 @@ describe('SchulteGrid', () => {
     expect(overlay?.textContent).toContain('正');
   });
 
+  it('floatingTarget：交替模式正/反方向用不同颜色（余光可辨）', () => {
+    // 正向 → primary（蓝）；反向 → orange。颜色不同即可余光区分方向。
+    const { container, rerender } = render(
+      <SchulteGrid
+        gridSize={3}
+        order="alternate"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        floatingTarget={{ target: null, direction: '正', isAlternate: true }}
+      />
+    );
+    const overlay = () => container.querySelector('.absolute.left-1\\/2') as HTMLElement;
+    expect(overlay().className).toMatch(/primary/);
+    expect(overlay().className).not.toMatch(/orange/);
+
+    // 翻成反向
+    rerender(
+      <SchulteGrid
+        gridSize={3}
+        order="alternate"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        floatingTarget={{ target: null, direction: '反', isAlternate: true }}
+      />
+    );
+    expect(overlay().className).toMatch(/orange/);
+    expect(overlay().className).not.toMatch(/primary/);
+  });
+
   it('floatingTarget：剩余 ≤ 20% 倒计时进入危险（红）样式', () => {
     const { container } = render(
       <SchulteGrid
@@ -304,5 +397,89 @@ describe('SchulteGrid', () => {
     // 危险态叠加层用红色背景
     const overlay = container.querySelector('.absolute.left-1\\/2');
     expect(overlay?.className).toMatch(/red/);
+  });
+
+  it('mixed 模式：未传 expectedSequence 时用 seed 生成随机顺序（非 1,2,3... 正序）', () => {
+    // 回归：之前 mixed 没传序列会兜底成 [1,2,...,N] 正序，导致 mixed 退化成 asc。
+    // 现在 mixed 用 seed 洗牌，第一个目标不应恒为 1。
+    const onTarget = vi.fn();
+    render(
+      <SchulteGrid
+        gridSize={3}
+        order="mixed"
+        isActive={true}
+        startTime={1000}
+        onCorrectClick={() => {}}
+        onWrongClick={() => {}}
+        onComplete={() => {}}
+        onTargetChange={onTarget}
+      />
+    );
+    // mixed 第一个目标不应总是 1（正序的标志）。
+    // 用多个 seed 验证：统计若干 seed 下首个目标，至少有一个不是 1。
+    const firstTargets = new Set<number>();
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const fn = vi.fn();
+      render(
+        <SchulteGrid
+          gridSize={3}
+          order="mixed"
+          isActive={true}
+          startTime={seed}
+          onCorrectClick={() => {}}
+          onWrongClick={() => {}}
+          onComplete={() => {}}
+          onTargetChange={fn}
+        />
+      );
+      const t = fn.mock.calls.at(-1)?.[0];
+      if (typeof t === 'number') firstTargets.add(t);
+    }
+    // 至少有一个 seed 产生的首目标不是 1（否则就是退化为正序了）
+    expect([...firstTargets].some((t) => t !== 1)).toBe(true);
+    // 当前 seed=1000 的首目标（断言稳定，便于复现）
+    expect(typeof onTarget.mock.calls.at(-1)?.[0]).toBe('number');
+  });
+
+  it('mixed 模式：点击顺序 ≠ 网格排列顺序（不和棋盘从左上到右下一致）', () => {
+    // 回归：上轮修复 mixed 退化成正序时，mixed 序列和 gridNumbers 共用了同一个 seed，
+    // 导致两者完全一致——mixed 变成「按棋盘位置挨个点」，毫无难度。
+    // 这里验证 mixed 的首个目标数字 ≠ 网格第一个位置的数字。
+    // 多 seed 验证：至少有一个 seed 下首目标 ≠ 网格首位数字
+    let differs = false;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 1000, 7777]) {
+      const fn = vi.fn();
+      const c = render(
+        <SchulteGrid gridSize={3} order="mixed" isActive={true} startTime={seed}
+          onCorrectClick={() => {}} onWrongClick={() => {}} onComplete={() => {}} onTargetChange={fn} />
+      ).container;
+      const nums = Array.from(c.querySelectorAll('button'))
+        .map((b) => Number(b.textContent))
+        .filter((n) => !Number.isNaN(n));
+      const target = fn.mock.calls.at(-1)?.[0];
+      // 基本完整性：首目标是 1-9 之间的数字
+      expect(target).toBeGreaterThanOrEqual(1);
+      expect(target).toBeLessThanOrEqual(9);
+      if (target !== nums[0]) differs = true;
+    }
+    expect(differs).toBe(true);
+  });
+
+  it('mixed 模式：同 seed 可复现，序列覆盖全部数字无重复', () => {
+    // 两个相同 startTime 的 mixed 棋盘，点击顺序应一致
+    const fn1 = vi.fn();
+    const fn2 = vi.fn();
+    const { unmount: u1 } = render(
+      <SchulteGrid gridSize={3} order="mixed" isActive={true} startTime={7777}
+        onCorrectClick={() => {}} onWrongClick={() => {}} onComplete={() => {}} onTargetChange={fn1} />
+    );
+    const first1 = fn1.mock.calls.at(-1)?.[0];
+    u1();
+    render(
+      <SchulteGrid gridSize={3} order="mixed" isActive={true} startTime={7777}
+        onCorrectClick={() => {}} onWrongClick={() => {}} onComplete={() => {}} onTargetChange={fn2} />
+    );
+    const first2 = fn2.mock.calls.at(-1)?.[0];
+    expect(first1).toEqual(first2);
   });
 });

@@ -73,7 +73,7 @@ export const sequenceInstructions: GameplayInstructionsConfig = {
     '位置准确率占 60%：物品在正确位置得满分',
     '物品准确率占 40%：物品正确但位置不对也得部分分',
   ],
-  hardModeNote: '可选择不同难度（5/7/10个物品）。必须记住顺序，无提示。',
+  hardModeNote: '可选择不同难度（5/7/9个物品）。必须记住顺序，无提示。',
 };
 
 // 暗瓶排列玩法说明

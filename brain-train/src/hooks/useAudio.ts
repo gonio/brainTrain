@@ -1,7 +1,12 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 
-export type SoundEffect = 'correct' | 'wrong' | 'complete' | 'tick';
+export type SoundEffect =
+  | 'correct'
+  | 'wrong'
+  | 'complete'
+  | 'tick'
+  | 'countdownFinal';
 
 // 模块级共享 AudioContext 单例：所有调用 useAudio() 的组件复用同一个，
 // 避免每个 hook 实例各建一个 context 增加资源占用、触发浏览器并发限制。
@@ -71,6 +76,18 @@ const TONE_PRESETS: Record<SoundEffect, ToneSpec> = {
     gain: 0.07,
     attack: 0.002,
     release: 0.058,
+  },
+  // 开局倒计时最后一声（数字「1」）：比普通 tick 更低、更响，提示马上开始。
+  // 关键：要「干脆」——不叠延迟泛音（泛音在主音后 +0.07s 才响，会让音效拖沓、
+  // 与数字「1」的显示错位，听起来像"音效没跟上/拖到了后面"）。
+  // 改用三角波 + 更低基础频 + 更大音量来体现「重」，而非靠拉长/叠泛音。
+  countdownFinal: {
+    freq: 440.0, // A4，比 tick(660) 低纯五度
+    type: 'triangle',
+    duration: 0.12,
+    gain: 0.18,
+    attack: 0.002,
+    release: 0.1,
   },
 };
 

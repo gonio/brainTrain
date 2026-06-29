@@ -55,12 +55,15 @@ export function StroopGame({
     setTimeLeft(timePerQuestion);
     const timer = setTimeout(() => {
       // 超时算错
+      const correctAnswer = rule === 'standard' ? current.wordColorName : current.word;
       onAnswer({
         word: current.word,
         wordColor: current.wordColorName,
         userAnswer: '',
         reactionTime: timePerQuestion * 1000,
         isCorrect: false,
+        correctAnswer,
+        rule,
       });
     }, timePerQuestion * 1000);
     return () => clearTimeout(timer);
@@ -106,6 +109,8 @@ export function StroopGame({
       userAnswer: selectedColorName,
       reactionTime,
       isCorrect,
+      correctAnswer,
+      rule,
     });
   }, [current, isActive, onAnswer, questionStartTime, rule]);
 
@@ -115,7 +120,7 @@ export function StroopGame({
       <div className="mb-6">
         <div className="flex justify-between text-xs text-muted-foreground mb-2">
           <span>题目 {currentQuestion + 1} / {totalQuestions}</span>
-          <span>选择文字的颜色</span>
+          <span>{rule === 'standard' ? '选颜色' : '选字义'}</span>
         </div>
         <div className="h-2 bg-accent rounded-full overflow-hidden">
           <div
@@ -135,11 +140,11 @@ export function StroopGame({
             {current.word}
           </span>
         </div>
-        {/* 提示文字 */}
-        <p className="text-center text-xs text-muted-foreground mt-3">
+        {/* 提示文字：精简，只把关键二字（颜色/字义）加大加粗，其余普通字体 */}
+        <p className="text-center text-base text-muted-foreground mt-4">
           {rule === 'standard'
-            ? <>忽略文字含义，选择<span className="font-bold text-foreground">文字的颜色</span></>
-            : <>忽略文字颜色，选择<span className="font-bold text-foreground">文字的含义</span></>
+            ? <>选<span className="text-xl font-black text-foreground">颜色</span></>
+            : <>选<span className="text-xl font-black text-foreground">字义</span></>
           }
           {timePerQuestion && timeLeft !== null && timeLeft > 0 && (
             <span className="ml-2 font-mono font-bold text-primary">{timeLeft}s</span>

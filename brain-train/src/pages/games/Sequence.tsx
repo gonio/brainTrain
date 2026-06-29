@@ -8,13 +8,18 @@ import { SequenceGame } from '../../components/game/SequenceGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
 import { GameStartScreen } from '../../components/game/GameStartScreen';
+import { useStartCountdown } from '../../hooks/useStartCountdown';
 import type { TrainingDetails } from '../../types';
 
-// 难度配置
-const DIFFICULTY_CONFIG: Record<'easy' | 'medium' | 'hard', { sequenceLength: number }> = {
-  easy: { sequenceLength: 5 },
-  medium: { sequenceLength: 7 },
-  hard: { sequenceLength: 10 },
+// 难度配置：序列长度 + 每个 item 的记忆显示时长。
+// 序列越长，每个 item 给的时间越长，避免图案多了记不住。
+const DIFFICULTY_CONFIG: Record<
+  'easy' | 'medium' | 'hard',
+  { sequenceLength: number; stepDurationMs: number; label: string }
+> = {
+  easy: { sequenceLength: 5, stepDurationMs: 1000, label: '简单 (5个)' },
+  medium: { sequenceLength: 6, stepDurationMs: 1200, label: '中等 (6个)' },
+  hard: { sequenceLength: 7, stepDurationMs: 1500, label: '困难 (7个)' },
 };
 
 export function Sequence() {
@@ -34,6 +39,8 @@ export function Sequence() {
     itemAccuracy: number;
     hasDistractors: boolean;
   } | null>(null);
+  // 开局 3 秒倒计时缓冲：结束后才真正 startGame（不计入游戏用时）
+  const { overlay: countdownOverlay, trigger: triggerCountdown } = useStartCountdown();
 
   const isPlaying = status === 'playing';
   const isIdle = status === 'idle';
@@ -48,14 +55,17 @@ export function Sequence() {
     return () => clearInterval(interval);
   }, [isPlaying, gameStartTime]);
 
+  // 真正激活游戏的逻辑：先倒计时缓冲，结束后才 startGame + 启动计时（3 秒不计入用时）
   const handleStart = useCallback(() => {
-    startGame('sequence');
-    setGameStartTime(Date.now());
-    setElapsedTime(0);
-    setShowResult(false);
-    setFinalScore(0);
-    setGameResult(null);
-  }, [startGame]);
+    triggerCountdown(() => {
+      startGame('sequence');
+      setGameStartTime(Date.now());
+      setElapsedTime(0);
+      setShowResult(false);
+      setFinalScore(0);
+      setGameResult(null);
+    });
+  }, [startGame, triggerCountdown]);
 
   const handleComplete = useCallback((result: {
     sequence: string[];
@@ -113,9 +123,7 @@ export function Sequence() {
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
         >
-          {d === 'easy' && '简单 (5个)'}
-          {d === 'medium' && '中等 (7个)'}
-          {d === 'hard' && '困难 (10个)'}
+          {DIFFICULTY_CONFIG[d].label}
         </button>
       ))}
     </div>
@@ -142,6 +150,7 @@ export function Sequence() {
       <div className="flex-1 flex flex-col justify-start py-2 mb-4">
         <SequenceGame
           sequenceLength={config.sequenceLength}
+          stepDurationMs={config.stepDurationMs}
           onComplete={handleComplete}
           isActive={isPlaying}
         />
@@ -244,7 +253,10 @@ export function Sequence() {
           </div>
         </motion.div>
       )}
-    </div>
-  </>
-);
+      </div>
+
+      {/* 开局倒计时遮罩 */}
+      {countdownOverlay}
+    </>
+  );
 }

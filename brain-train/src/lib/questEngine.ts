@@ -43,11 +43,16 @@ export function pickNextGame(progress: Pick<QuestProgress, 'progress'>): GameId 
  * 应用一关结果到进度（不可变，返回新对象）。
  *
  * 规则：
- *   - progress[g] = max(progress[g], difficulty)（防回退）
- *   - stars[key] = max(stars[key], newStars)（只留最好），key = `${gameId}-${difficulty}`
- *   - 4 个 progress 全 10 → completed = true
+ *   - 失败（passed=false）：不推进难度、不记星、不触发 completed，原样返回进度
+ *   - 过关（passed=true）：
+ *     - progress[g] = max(progress[g], difficulty)（防回退）
+ *     - stars[key] = max(stars[key], newStars)（只留最好），key = `${gameId}-${difficulty}`
+ *     - 4 个 progress 全 10 → completed = true
  */
 export function applyResult(progress: QuestProgress, r: QuestResult): QuestProgress {
+  // 失败：不推进、不记星
+  if (r.passed === false) return progress;
+
   const newGameProgress = Math.max(progress.progress[r.gameId], r.difficulty);
   const key = `${r.gameId}-${r.difficulty}`;
   const prevStars = progress.stars[key] ?? 0;
