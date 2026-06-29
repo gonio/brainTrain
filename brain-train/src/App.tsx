@@ -264,15 +264,17 @@ function RootLayout() {
   return (
     <ErrorBoundary>
       <AppLayout>
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            // 不设 exit：data router 下 <Outlet/> 在导航时同步切到新路由，
+            // exit 动画期间渲染的已是新内容，会出现「新内容先显示→淡出→再淡入」的闪烁。
+            // 改为纯淡入：旧页面瞬时卸载，新页面从透明淡入，干脆不闪。
             transition={{
-              duration: 0.2,
-              ease: [0.4, 0, 0.2, 1]
+              duration: 0.15,
+              ease: [0.4, 0, 0.2, 1],
             }}
           >
             <Outlet />

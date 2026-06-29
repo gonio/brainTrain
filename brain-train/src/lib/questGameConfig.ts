@@ -27,32 +27,34 @@ export const SCHULTE_DIFFICULTIES: readonly DifficultyLevel<SchulteDifficultyPar
 
 // ── Sequence 序列记忆（10 级） ──
 // 难度梯度：先 step（逐个亮起，易记）→ flash（整段闪现，难记）→ 加干扰项 → 加回答限时
+// 3 星门槛=100（全对），错一个就不能满星；goodThreshold 为 2 星准确率门槛。
 export const SEQUENCE_DIFFICULTIES: readonly DifficultyLevel<SequenceDifficultyParams>[] = [
-  { difficulty: 1,  params: { sequenceLength: 4,  displayMode: 'step',  distractors: 0 }, goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 2,  params: { sequenceLength: 5,  displayMode: 'step',  distractors: 0 }, goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 3,  params: { sequenceLength: 6,  displayMode: 'step',  distractors: 0 }, goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 4,  params: { sequenceLength: 6,  displayMode: 'flash', distractors: 0 }, goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 5,  params: { sequenceLength: 7,  displayMode: 'flash', distractors: 0 }, goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 6,  params: { sequenceLength: 7,  displayMode: 'flash', distractors: 1 }, goodThreshold: 75, excellentThreshold: 90 },
-  { difficulty: 7,  params: { sequenceLength: 8,  displayMode: 'flash', distractors: 2 }, goodThreshold: 75, excellentThreshold: 90 },
-  { difficulty: 8,  params: { sequenceLength: 9,  displayMode: 'flash', distractors: 2 }, goodThreshold: 70, excellentThreshold: 85 },
-  { difficulty: 9,  params: { sequenceLength: 10, displayMode: 'flash', distractors: 3 }, goodThreshold: 70, excellentThreshold: 85 },
-  { difficulty: 10, params: { sequenceLength: 10, displayMode: 'flash', distractors: 3, answerTimeLimit: 20 }, goodThreshold: 65, excellentThreshold: 80 },
+  { difficulty: 1,  params: { sequenceLength: 4,  displayMode: 'step',  distractors: 0 }, goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 2,  params: { sequenceLength: 5,  displayMode: 'step',  distractors: 0 }, goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 3,  params: { sequenceLength: 6,  displayMode: 'step',  distractors: 0 }, goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 4,  params: { sequenceLength: 6,  displayMode: 'flash', distractors: 0 }, goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 5,  params: { sequenceLength: 7,  displayMode: 'flash', distractors: 0 }, goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 6,  params: { sequenceLength: 7,  displayMode: 'flash', distractors: 1 }, goodThreshold: 75, excellentThreshold: 100 },
+  { difficulty: 7,  params: { sequenceLength: 8,  displayMode: 'flash', distractors: 2 }, goodThreshold: 75, excellentThreshold: 100 },
+  { difficulty: 8,  params: { sequenceLength: 9,  displayMode: 'flash', distractors: 2 }, goodThreshold: 70, excellentThreshold: 100 },
+  { difficulty: 9,  params: { sequenceLength: 9,  displayMode: 'flash', distractors: 3 }, goodThreshold: 70, excellentThreshold: 100 },
+  { difficulty: 10, params: { sequenceLength: 9,  displayMode: 'flash', distractors: 3, answerTimeLimit: 20 }, goodThreshold: 65, excellentThreshold: 100 },
 ];
 
 // ── Stroop 斯特鲁普（10 级） ──
 // 难度梯度：加题数 → reverse → dual（每题随机规则）→ 加每题限时
+// 3 星门槛=100（全对），错一个就不能满星；goodThreshold 为 2 星准确率门槛。
 export const STROOP_DIFFICULTIES: readonly DifficultyLevel<StroopDifficultyParams>[] = [
-  { difficulty: 1,  params: { questionCount: 10, mode: 'standard' },                   goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 2,  params: { questionCount: 12, mode: 'standard' },                   goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 3,  params: { questionCount: 15, mode: 'standard' },                   goodThreshold: 80, excellentThreshold: 95 },
-  { difficulty: 4,  params: { questionCount: 15, mode: 'reverse' },                    goodThreshold: 75, excellentThreshold: 90 },
-  { difficulty: 5,  params: { questionCount: 15, mode: 'dual' },                       goodThreshold: 70, excellentThreshold: 85 },
-  { difficulty: 6,  params: { questionCount: 18, mode: 'dual' },                       goodThreshold: 70, excellentThreshold: 85 },
-  { difficulty: 7,  params: { questionCount: 20, mode: 'dual' },                       goodThreshold: 70, excellentThreshold: 85 },
-  { difficulty: 8,  params: { questionCount: 20, mode: 'dual', timePerQuestion: 3 },   goodThreshold: 65, excellentThreshold: 80 },
-  { difficulty: 9,  params: { questionCount: 20, mode: 'dual', timePerQuestion: 2 },   goodThreshold: 60, excellentThreshold: 75 },
-  { difficulty: 10, params: { questionCount: 20, mode: 'dual', timePerQuestion: 2 },   goodThreshold: 55, excellentThreshold: 70 },
+  { difficulty: 1,  params: { questionCount: 10, mode: 'standard' },                   goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 2,  params: { questionCount: 12, mode: 'standard' },                   goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 3,  params: { questionCount: 15, mode: 'standard' },                   goodThreshold: 80, excellentThreshold: 100 },
+  { difficulty: 4,  params: { questionCount: 15, mode: 'reverse' },                    goodThreshold: 75, excellentThreshold: 100 },
+  { difficulty: 5,  params: { questionCount: 15, mode: 'dual' },                       goodThreshold: 70, excellentThreshold: 100 },
+  { difficulty: 6,  params: { questionCount: 18, mode: 'dual' },                       goodThreshold: 70, excellentThreshold: 100 },
+  { difficulty: 7,  params: { questionCount: 20, mode: 'dual' },                       goodThreshold: 70, excellentThreshold: 100 },
+  { difficulty: 8,  params: { questionCount: 20, mode: 'dual', timePerQuestion: 3 },   goodThreshold: 65, excellentThreshold: 100 },
+  { difficulty: 9,  params: { questionCount: 20, mode: 'dual', timePerQuestion: 2 },   goodThreshold: 60, excellentThreshold: 100 },
+  { difficulty: 10, params: { questionCount: 20, mode: 'dual', timePerQuestion: 2 },   goodThreshold: 55, excellentThreshold: 100 },
 ];
 
 // ── Bottle 暗瓶排列（10 级） ──
@@ -83,4 +85,17 @@ export const DIFFICULTY_TABLES: Record<GameId, readonly DifficultyLevel<unknown>
 export function getDifficulty(gameId: GameId, difficulty: number): DifficultyLevel<unknown> {
   const table = DIFFICULTY_TABLES[gameId];
   return table[difficulty - 1];
+}
+
+/**
+ * 序列记忆失败阈值：答错位置数 ≥ 该值即失败。
+ * 阶梯：1-8 级（序列长 4-8）答错一半；9 级 3 个；10 级 2 个。
+ */
+export function getSequenceFailThreshold(difficulty: number): number {
+  if (difficulty >= 10) return 2;
+  if (difficulty === 9) return 3;
+  // 1-8 级：序列长度的一半，向上取整
+  const level = SEQUENCE_DIFFICULTIES[difficulty - 1];
+  const len = level.params.sequenceLength;
+  return Math.ceil(len / 2);
 }

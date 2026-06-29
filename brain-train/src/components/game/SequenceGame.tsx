@@ -2,18 +2,14 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-// 可用物品池（emoji）
+// 固定物品集（12 个）：序列与干扰项都从这 12 个里选。
+// 挑选原则——主导色互不重复、形态分明（动物/水果/物品混搭），
+// 让玩家靠颜色 + 轮廓即可一眼区分，无需辨认相似图案。
+//   🐶 棕黄  🐱 灰   🐰 白   🦊 橙   🐸 绿   🐧 黑白
+//   🍎 红    🍋 亮黄  🍇 紫   🫐 深蓝  🍑 粉   🐝 黄黑条纹
 const ITEMS_POOL = [
-  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯',
-  '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆',
-  '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋',
-  '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎',
-  '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟',
-  '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
-  '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🥑', '🍆', '🥔',
-  '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄',
-  '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱',
-  '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳',
+  '🐶', '🐱', '🐰', '🦊', '🐸', '🐧',
+  '🍎', '🍋', '🍇', '🫐', '🍑', '🐝',
 ];
 
 // 游戏阶段
@@ -66,6 +62,8 @@ interface SequenceGameProps {
   displayMode?: 'step' | 'flash';    // step=逐个亮起（默认），flash=整段闪现
   distractors?: number;              // 回忆阶段混入的错误选项数（默认 0）
   answerTimeLimit?: number;          // 回忆阶段总限时秒数（默认无限制）
+  stepDurationMs?: number;           // step 模式每个 item 的显示时长（默认 1200ms）
+  flashDurationMs?: number;          // flash 模式整段显示时长（默认按序列长度算）
 }
 
 export function SequenceGame({
@@ -75,6 +73,8 @@ export function SequenceGame({
   displayMode = 'step',
   distractors = 0,
   answerTimeLimit,
+  stepDurationMs = 1200,
+  flashDurationMs,
 }: SequenceGameProps) {
   const [phase, setPhase] = useState<GamePhase>('memorize');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -97,6 +97,13 @@ export function SequenceGame({
     return shuffled.slice(0, sequenceLength);
   }, [sequenceLength, isActive]);
 
+  // flash 模式显示时长：默认按序列长度给（每项 700ms + 1200ms 基础），
+  // 让长序列（6-9 个）也有足够时间记忆，而非写死的过短 2 秒。
+  const flashMs = useMemo(
+    () => flashDurationMs ?? sequence.length * 700 + 1200,
+    [flashDurationMs, sequence.length],
+  );
+
   // 打乱后的选项（用于回忆阶段）。distractors>0 时从池中混入错误选项作干扰
   const shuffledOptions = useMemo(() => {
     const baseOptions = [...sequence];
@@ -115,7 +122,7 @@ export function SequenceGame({
     setCurrentIndex(0);
   }, []);
 
-  // step 模式记忆阶段推进：每个 item 显示 800ms，最后一个播完立即进入回忆阶段
+  // step 模式记忆阶段推进：每个 item 显示 stepDurationMs，最后一个播完立即进入回忆阶段
   useEffect(() => {
     if (!isActive || phase !== 'memorize' || displayMode === 'flash') return;
     const isLast = currentIndex >= sequence.length - 1;
@@ -125,9 +132,9 @@ export function SequenceGame({
       } else {
         setCurrentIndex((prev) => prev + 1);
       }
-    }, 800);
+    }, stepDurationMs);
     return () => clearTimeout(timer);
-  }, [isActive, phase, displayMode, currentIndex, sequence.length, handleMemorizeComplete]);
+  }, [isActive, phase, displayMode, currentIndex, sequence.length, stepDurationMs, handleMemorizeComplete]);
 
   // 回忆阶段总倒计时（answerTimeLimit 存在时启用）。超时按当前已选序列结算
   useEffect(() => {
@@ -214,7 +221,7 @@ export function SequenceGame({
         <div className="relative">
           <div className="aspect-square bg-surface-container-low rounded-2xl flex items-center justify-center shadow-inner mb-4">
             {displayMode === 'flash' ? (
-              <FlashMemorize sequence={sequence} onDone={handleMemorizeComplete} />
+              <FlashMemorize sequence={sequence} onDone={handleMemorizeComplete} durationMs={flashMs} />
             ) : (
               <motion.span
                 key={currentIndex}
@@ -310,12 +317,22 @@ export function SequenceGame({
   );
 }
 
-// flash 模式记忆阶段：整段序列同时显示 2 秒后结束
-function FlashMemorize({ sequence, onDone }: { sequence: string[]; onDone: () => void }) {
+// flash 模式记忆阶段：整段序列同时显示一段时间后结束。
+// 时间按序列长度计算——序列越长，需要越多时间记忆。
+// 写死 2 秒会让长序列（6-9 个）根本记不住，所以默认用「每项 700ms + 1200ms 基础」。
+function FlashMemorize({
+  sequence,
+  onDone,
+  durationMs,
+}: {
+  sequence: string[];
+  onDone: () => void;
+  durationMs: number;
+}) {
   useEffect(() => {
-    const timer = setTimeout(onDone, 2000);
+    const timer = setTimeout(onDone, durationMs);
     return () => clearTimeout(timer);
-  }, [onDone]);
+  }, [onDone, durationMs]);
 
   return (
     <div className="flex flex-wrap justify-center gap-3 p-4 max-w-md">

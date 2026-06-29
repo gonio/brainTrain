@@ -7,6 +7,7 @@ import { SchulteGrid } from '../../components/game/SchulteGrid';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
 import { GameStartScreen } from '../../components/game/GameStartScreen';
+import { useStartCountdown } from '../../hooks/useStartCountdown';
 import { QuestLevelIntro, QuestHUD, QuestResultDialog } from '../../components/game';
 import {
   getLevelConfig,
@@ -32,6 +33,8 @@ function SchulteFree({ onExit }: { onExit: () => void }) {
   const [clickSequence, setClickSequence] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  // 开局 3 秒倒计时缓冲：结束后才真正 startGame（不计入游戏用时）
+  const { overlay: countdownOverlay, trigger: triggerCountdown } = useStartCountdown();
 
   const isPlaying = status === 'playing';
   const isPaused = status === 'paused';
@@ -49,14 +52,16 @@ function SchulteFree({ onExit }: { onExit: () => void }) {
   }, [isPlaying, gameStartTime]);
 
   const handleStart = useCallback(() => {
-    startGame('schulte');
-    setGameStartTime(Date.now());
-    setElapsedTime(0);
-    setErrors(0);
-    setClickSequence([]);
-    setShowResult(false);
-    setFinalScore(0);
-  }, [startGame]);
+    triggerCountdown(() => {
+      startGame('schulte');
+      setGameStartTime(Date.now());
+      setElapsedTime(0);
+      setErrors(0);
+      setClickSequence([]);
+      setShowResult(false);
+      setFinalScore(0);
+    });
+  }, [startGame, triggerCountdown]);
 
   const handleCorrectClick = useCallback((_number: number, _time: number) => {
     setClickSequence(prev => [...prev, _number]);
@@ -209,6 +214,9 @@ function SchulteFree({ onExit }: { onExit: () => void }) {
           </button>
         )}
       </div>
+
+      {/* 开局倒计时遮罩 */}
+      {countdownOverlay}
     </>
   );
 }
@@ -372,6 +380,11 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   const [progress, setProgress] = useState<SchulteQuestProgress>(
     initialProgress ?? createInitialProgress()
   );
+  // 开局 3 秒倒计时缓冲（与本地 phase 同名冲突，故解构成 startCountdown）
+  const {
+    overlay: startCountdownOverlay,
+    trigger: triggerStartCountdown,
+  } = useStartCountdown();
 
   // 游戏运行时状态
   const [gameStartTime, setGameStartTime] = useState(0);
@@ -544,19 +557,22 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
   }, [perNumberTime, remainingTime, phase, config.timeLimitPerNumber]);
 
   const handleStart = () => {
-    setGameStartTime(Date.now());
-    setErrors(0);
-    setCombo(0);
-    setMaxCombo(0);
-    setCorrectClickCount(0);
-    setLives(config.lives);
-    setRemainingTime(totalTime);
-    // 每数字倒计时：初始给满 timeLimitPerNumber
-    setPerNumberTime(config.timeLimitPerNumber);
-    setCurrentTarget(null);
-    setCurrentDirection(null);
-    failGuardRef.current = false;
-    setPhase('playing');
+    // 倒计时缓冲结束后才真正进入 playing（计时/限时从倒计时后开始）
+    triggerStartCountdown(() => {
+      setGameStartTime(Date.now());
+      setErrors(0);
+      setCombo(0);
+      setMaxCombo(0);
+      setCorrectClickCount(0);
+      setLives(config.lives);
+      setRemainingTime(totalTime);
+      // 每数字倒计时：初始给满 timeLimitPerNumber
+      setPerNumberTime(config.timeLimitPerNumber);
+      setCurrentTarget(null);
+      setCurrentDirection(null);
+      failGuardRef.current = false;
+      setPhase('playing');
+    });
   };
 
   const handleWrongClick = () => {
@@ -674,13 +690,24 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
             onComboChange={handleComboChange}
             onTargetChange={handleTargetChange}
             onDirectionChange={handleDirectionChange}
-            floatingTarget={{
-              target: currentTarget,
-              direction: currentDirection,
-              perNumberTime,
-              perNumberTotal: config.timeLimitPerNumber,
-              isAlternate: config.direction === 'alternate',
-            }}
+            floatingTarget={
+              // 与主线闯关一致：固定方向关卡（asc/desc）只显示方向（正/反），不显示下一个数字；
+              // alternate 显示当前方向；mixed 无正反概念，显示数字。
+              // displayDir：asc→正、desc→反、alternate→currentDirection，否则 null。
+              (() => {
+                const dir = config.direction;
+                const fixedDir: '正' | '反' | null =
+                  dir === 'asc' ? '正' : dir === 'desc' ? '反' : null;
+                const displayDir = dir === 'alternate' ? currentDirection : fixedDir;
+                return {
+                  target: displayDir ? null : currentTarget,
+                  direction: displayDir,
+                  perNumberTime,
+                  perNumberTotal: config.timeLimitPerNumber,
+                  isAlternate: !!displayDir,
+                };
+              })()
+            }
           />
         </>
       )}
@@ -718,6 +745,9 @@ function SchulteQuest({ initialProgress, onExit }: SchulteQuestProps) {
           onRestart={handleRestartFromStart}
         />
       )}
+
+      {/* 开局倒计时遮罩 */}
+      {startCountdownOverlay}
     </div>
   );
 }

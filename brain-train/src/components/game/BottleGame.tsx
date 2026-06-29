@@ -31,7 +31,13 @@ interface BottleGameProps {
   isActive: boolean;
   startTime: number;
   onSwap: (matchCount: number) => void;
-  onComplete: (totalSwaps: number, optimalSwaps: number, targetSeq: string[], playerSeq: string[]) => void;
+  onComplete: (
+    totalSwaps: number,
+    optimalSwaps: number,
+    targetSeq: string[],
+    playerSeq: string[],
+    timedOutAndIncomplete?: boolean,
+  ) => void;
   timeLimit?: number;  // 限时秒数（默认无限制）
 }
 
@@ -81,7 +87,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
     completedRef.current = false;
   }, [startTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 限时模式倒计时：超时按当前状态强制完成（未达成也算完成，只是星级低）
+  // 限时模式倒计时：超时上抛「超时且未完成」标志，由 Runner 判定失败。
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   useEffect(() => {
     if (!isActive || !timeLimit || completedRef.current) {
@@ -96,7 +102,9 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
           clearInterval(interval);
           if (!completedRef.current) {
             completedRef.current = true;
-            onComplete(swapCountRef.current, optimal, target, playerSequence);
+            // 超时且未完成（玩家序列未排成目标顺序）→ 上抛标志
+            const incomplete = countMatches(target, playerSequence) !== bottleCount;
+            onComplete(swapCountRef.current, optimal, target, playerSequence, incomplete);
           }
           return 0;
         }
@@ -104,7 +112,7 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
       });
     }, 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-line react-hooks/exhaustive-deps
   }, [isActive, timeLimit]);
 
   // 交换两个位置的瓶子
@@ -245,7 +253,27 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
       onPointerCancel={handlePointerCancel}
       onLostPointerCapture={handlePointerCancel}
     >
-      {/* 匹配计数 + 限时倒计时 */}
+      {/* 限时倒计时：顶部居中大号，≤10s 变红脉动（之前是底部小字，玩家看不到） */}
+      {timeLeft !== null && timeLimit && (
+        <div className="w-full flex justify-center">
+          <motion.span
+            key={timeLeft}
+            initial={{ scale: 1.4, opacity: 0.6 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className={`font-black font-mono leading-none tabular-nums ${
+              timeLeft <= 10
+                ? 'text-5xl text-red-500 animate-pulse'
+                : 'text-4xl text-foreground'
+            }`}
+          >
+            {timeLeft}
+            <span className="text-xl text-muted-foreground ml-1">s</span>
+          </motion.span>
+        </div>
+      )}
+
+      {/* 匹配计数 */}
       <div className="text-center">
         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1 block">
           匹配
@@ -253,11 +281,6 @@ export function BottleGame({ bottleCount, isActive, startTime, onSwap, onComplet
         <span className="text-3xl font-black font-headline text-primary">
           {matchCount}<span className="text-lg text-muted-foreground">/{bottleCount}</span>
         </span>
-        {timeLeft !== null && timeLimit && (
-          <span className="block mt-1 font-mono font-bold text-sm text-muted-foreground">
-            剩余 {timeLeft}s
-          </span>
-        )}
       </div>
 
       {/* 上排 - 可见瓶子（玩家操作） */}

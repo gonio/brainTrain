@@ -107,6 +107,35 @@ describe('applyResult', () => {
     applyResult(initial, result({ gameId: 'schulte', difficulty: 5, stars: 3 }));
     expect(initial).toEqual(snapshot);
   });
+
+  it('失败（passed:false）不推进难度', () => {
+    const initial = createInitialProgress(); // schulte=0
+    const updated = applyResult(initial, result({ gameId: 'schulte', difficulty: 1, passed: false, stars: 0 }));
+    expect(updated.progress.schulte).toBe(0); // 未推进
+  });
+
+  it('失败（passed:false）不记录星级', () => {
+    const initial = createInitialProgress();
+    const updated = applyResult(initial, result({ gameId: 'schulte', difficulty: 1, passed: false, stars: 0 }));
+    expect(updated.stars['schulte-1']).toBeUndefined(); // 未记星
+  });
+
+  it('失败（passed:false）不触发 completed', () => {
+    // 差一关通关，但这次失败 → 仍 completed=false
+    const initial: QuestProgress = {
+      id: 'singleton', progress: p(10, 10, 10, 9), stars: {}, completed: false,
+    };
+    const updated = applyResult(initial, result({ gameId: 'bottle', difficulty: 10, passed: false, stars: 0 }));
+    expect(updated.progress.bottle).toBe(9);
+    expect(updated.completed).toBe(false);
+  });
+
+  it('失败（passed:false）返回的 progress 与原对象内容一致（除对象引用外）', () => {
+    const initial = createInitialProgress();
+    const updated = applyResult(initial, result({ gameId: 'stroop', difficulty: 2, passed: false, stars: 0 }));
+    expect(updated.progress).toEqual(initial.progress);
+    expect(updated.stars).toEqual(initial.stars);
+  });
 });
 
 describe('isCleared', () => {

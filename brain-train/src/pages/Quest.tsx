@@ -42,6 +42,13 @@ export function Quest() {
 
   const handleNext = useCallback(() => {
     if (!progress) return;
+    // 失败重挑本关：currentGame/currentDifficulty 不变，直接重进。
+    // （失败时引擎已忽略推进，progress 未变，重新进入就是同一关。）
+    if (lastResult?.passed === false) {
+      setLastResult(null);
+      setView('playing');
+      return;
+    }
     const game = pickNextGame(progress);
     if (!game) {
       setView('hub');
@@ -51,7 +58,7 @@ export function Quest() {
     setCurrentDifficulty(progress.progress[game] + 1);
     setLastResult(null);
     setView('playing');
-  }, [progress]);
+  }, [progress, lastResult]);
 
   const handleExit = useCallback(() => {
     setView('hub');

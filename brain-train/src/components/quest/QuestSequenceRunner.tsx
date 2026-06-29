@@ -1,7 +1,9 @@
 // Sequence 适配器：按难度渲染 SequenceGame，监听 onComplete 翻译为 QuestResult
 import { useCallback } from 'react';
 import { SequenceGame } from '@/components/game/SequenceGame';
-import { getDifficulty } from '@/lib/questGameConfig';
+import { getDifficulty, getSequenceFailThreshold } from '@/lib/questGameConfig';
+import { useAudio } from '@/hooks/useAudio';
+import { useSettingsStore } from '@/stores/settingsStore';
 import type { SequenceDifficultyParams } from '@/types/quest';
 import type { RunnerProps } from './QuestRunner';
 
@@ -9,6 +11,9 @@ export function QuestSequenceRunner({ difficulty, onComplete }: RunnerProps) {
   const level = getDifficulty('sequence', difficulty);
   const { sequenceLength, displayMode, distractors, answerTimeLimit } =
     level.params as SequenceDifficultyParams;
+
+  const { soundEnabled } = useSettingsStore();
+  const { playEffect } = useAudio();
 
   const handleComplete = useCallback((result: {
     sequence: string[];
@@ -25,15 +30,22 @@ export function QuestSequenceRunner({ difficulty, onComplete }: RunnerProps) {
     if (accuracy >= level.excellentThreshold) stars = 3;
     else if (accuracy >= level.goodThreshold) stars = 2;
 
+    // 失败判定：答错位置数 ≥ 难度阈值（1-8级=⌈长度/2⌉，9级=3，10级=2）
+    const wrongPositions = result.sequence.filter((s, i) => s !== result.userSequence[i]).length;
+    const failed = wrongPositions >= getSequenceFailThreshold(difficulty);
+
     onComplete({
       gameId: 'sequence',
       difficulty,
-      passed: true,
-      stars,
+      passed: !failed,
+      stars: failed ? 0 : stars,
       score: Math.round(accuracy),
       details: result,
     });
-  }, [difficulty, level.goodThreshold, level.excellentThreshold, onComplete]);
+    if (soundEnabled) {
+      playEffect(failed ? 'wrong' : accuracy > 80 ? 'complete' : 'tick');
+    }
+  }, [difficulty, level.goodThreshold, level.excellentThreshold, onComplete, soundEnabled, playEffect]);
 
   return (
     <SequenceGame

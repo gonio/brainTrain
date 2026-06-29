@@ -52,6 +52,12 @@ export interface StroopQuestion {
   userAnswer: string;
   isCorrect: boolean;
   reactionTime: number;
+  /** 本题正确答案：standard=题目显示的颜色，reverse=文字字面含义。
+   *  由 StroopGame 填好上抛，结算页据此展示「你选/正确」对比。 */
+  correctAnswer?: string;
+  /** 本题判定规则：standard=选颜色 / reverse=选字义。dual 模式每题随机，
+   *  结算页据此标明「本题要求选颜色还是选字义」，否则用户无法理解对错。 */
+  rule?: 'standard' | 'reverse';
 }
 
 export interface StroopDetails {

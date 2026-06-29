@@ -8,6 +8,7 @@ import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
 import { GameStartScreen } from '../../components/game/GameStartScreen';
 import { DifficultySelector } from '../../components/game/DifficultySelector';
+import { useStartCountdown } from '../../hooks/useStartCountdown';
 import type { TrainingDetails } from '../../types';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -46,6 +47,8 @@ export function Bottle() {
   const [showResult, setShowResult] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [lastOptimalSwaps, setLastOptimalSwaps] = useState(0);
+  // 开局 3 秒倒计时缓冲：结束后才真正 startGame（不计入游戏用时）
+  const { overlay: countdownOverlay, trigger: triggerCountdown } = useStartCountdown();
 
   const isPlaying = status === 'playing';
   const isPaused = status === 'paused';
@@ -63,14 +66,16 @@ export function Bottle() {
   }, [isPlaying, gameStartTime, showResult]);
 
   const handleStart = useCallback(() => {
-    startGame('bottle');
-    setGameStartTime(Date.now());
-    setElapsedTime(0);
-    setFinalTime(0);
-    setTotalSwaps(0);
-    setShowResult(false);
-    setFinalScore(0);
-  }, [startGame]);
+    triggerCountdown(() => {
+      startGame('bottle');
+      setGameStartTime(Date.now());
+      setElapsedTime(0);
+      setFinalTime(0);
+      setTotalSwaps(0);
+      setShowResult(false);
+      setFinalScore(0);
+    });
+  }, [startGame, triggerCountdown]);
 
   // 再玩一次：回到开始/选难度页，而非直接开新一局（让玩家能改难度）
   const handlePlayAgain = useCallback(() => {
@@ -236,6 +241,9 @@ export function Bottle() {
           </motion.div>
         )}
       </div>
+
+      {/* 开局倒计时遮罩 */}
+      {countdownOverlay}
     </>
   );
 }

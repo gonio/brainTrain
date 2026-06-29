@@ -6,6 +6,7 @@ import { StroopGame } from '../../components/game/StroopGame';
 import { ScoreBoard } from '../../components/game/ScoreBoard';
 import { GameControlBar } from '../../components/game/GameControlBar';
 import { GameStartScreen } from '../../components/game/GameStartScreen';
+import { useStartCountdown } from '../../hooks/useStartCountdown';
 import type { TrainingDetails, StroopQuestion } from '../../types';
 
 // 游戏配置
@@ -22,6 +23,8 @@ export function Stroop() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  // 开局 3 秒倒计时缓冲：结束后才真正 startGame（不计入游戏用时）
+  const { overlay: countdownOverlay, trigger: triggerCountdown } = useStartCountdown();
 
   const isPlaying = status === 'playing';
   const isPaused = status === 'paused';
@@ -50,14 +53,16 @@ export function Stroop() {
   };
 
   const handleStart = useCallback(() => {
-    startGame('stroop');
-    setGameStartTime(Date.now());
-    setCurrentQuestion(0);
-    setQuestions([]);
-    setElapsedTime(0);
-    setShowResult(false);
-    setFinalScore(0);
-  }, [startGame]);
+    triggerCountdown(() => {
+      startGame('stroop');
+      setGameStartTime(Date.now());
+      setCurrentQuestion(0);
+      setQuestions([]);
+      setElapsedTime(0);
+      setShowResult(false);
+      setFinalScore(0);
+    });
+  }, [startGame, triggerCountdown]);
 
   const handleAnswer = useCallback((question: StroopQuestion) => {
     setQuestions(prev => [...prev, question]);
@@ -248,6 +253,9 @@ export function Stroop() {
         </div>
       )}
     </div>
+
+    {/* 开局倒计时遮罩 */}
+    {countdownOverlay}
   </>
 );
 }

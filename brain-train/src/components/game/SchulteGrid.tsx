@@ -10,7 +10,9 @@ interface SchulteGridProps {
   isActive: boolean;
   startTime: number;
   onCorrectClick: (number: number, time: number) => void;
-  onWrongClick: () => void;
+  // 错点回调：带「点了哪个数字 / 当时应该点哪个」明细，结算页据此展示对比。
+  // 旧调用方（不取参数）照常兼容。
+  onWrongClick?: (info: { clicked: number; expected: number }) => void;
   onComplete?: () => void;
   onComboChange?: (combo: number) => void;
   // 下一个目标数字变化时通知（null = 已全部点完 / 交替模式不报具体数字）。用于 HUD。
@@ -46,16 +48,22 @@ function buildTargetSequence(
     // 每段长度随机 1-4（确定性 RNG，保证重试可复现），段长点完后翻方向。
     return buildAlternateWithDirections(N, seed ?? 0).sequence;
   }
-  // mixed
+  // mixed：完全随机顺序。
+  // 优先用外部传入的 expectedSequence；没传则用 seed 洗牌生成随机序列。
+  // （之前没传时会兜底成 1,2,3...N 的正序，导致 mixed 实际退化成 asc。）
+  //
+  // 关键：网格位置（gridNumbers）也用 startTime 洗牌同一个 [1..N]。
+  // mixed 的点击序列若用同一个 seed，会和网格排列完全一致——变成「按棋盘从左上到
+  // 右下挨个点」，毫无难度。所以这里给 seed 加偏移，让两套洗牌相互独立。
   if (expectedSequence && expectedSequence.length === N) {
     return [...expectedSequence];
   }
-  // 兜底（不该到这里）
-  return Array.from({ length: N }, (_, i) => i + 1);
+  const base = Array.from({ length: N }, (_, i) => i + 1);
+  return seededShuffle(base, (seed ?? 0) + 2654435761);
 }
 
-// 紧贴棋盘上沿的浮动目标提示。锚定在棋盘容器顶部正中、半浮出上边缘，
-// 与棋盘几乎零距离，玩家点棋盘时余光即可扫到目标/方向。
+// 悬浮在棋盘正上方的目标/方向提示。完全脱离棋盘上沿（向上留出间距），
+// 大号文字 + 正反异色，让玩家用余光即可判断当前目标/方向，无需远眺上方 HUD。
 function TargetOverlay({
   target,
 }: {
@@ -68,6 +76,21 @@ function TargetOverlay({
   const isDanger = perPercent <= 20;
   const isWarning = perPercent <= 40;
 
+  // 交替模式正/反用不同颜色：正向=蓝（primary，冷色/前进感），
+  // 反向=橙红（暖色/反向感）。余光靠颜色即可区分方向，不必读字。
+  // 倒计时危险态（≤20%）统一压成红色，覆盖方向色，强调「快超时」。
+  const dirTone =
+    direction === '正'
+      ? 'bg-primary border-primary text-primary-foreground'
+      : 'bg-orange-500 border-orange-400 text-white';
+  const colorTone = isDanger
+    ? 'bg-red-500 border-red-400 text-white'
+    : isAlternate
+      ? dirTone
+      : isWarning
+        ? 'bg-amber-400 border-amber-300 text-white'
+        : 'bg-primary border-primary text-primary-foreground';
+
   return (
     <motion.div
       // key 变化触发淡入，强化「目标/方向变了」的感知
@@ -75,27 +98,22 @@ function TargetOverlay({
       initial={{ y: -6, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.18 }}
-      className={`absolute left-1/2 -translate-x-1/2 -top-3 z-20 flex items-center gap-2 px-4 py-1.5 rounded-full shadow-lg border pointer-events-none ${
-        isDanger
-          ? 'bg-red-500 border-red-400 text-white'
-          : isWarning
-            ? 'bg-amber-400 border-amber-300 text-white'
-            : 'bg-primary border-primary text-primary-foreground'
-      }`}
+      // -top-14：卡片整体悬在棋盘上方（向上 56px），与棋盘留出明显间距，不再压住第一行格子。
+      className={`absolute left-1/2 -translate-x-1/2 -top-14 z-20 flex items-center gap-3 px-6 py-2.5 rounded-full shadow-xl border-2 pointer-events-none ${colorTone}`}
     >
       {/* 目标数字 / 方向：大号、高对比，余光可读 */}
       {isAlternate ? (
-        <span className="text-xl font-black font-headline leading-none">
+        <span className="text-3xl font-black font-headline leading-none">
           {direction ?? '—'}
         </span>
       ) : (
-        <span className="text-xl font-black font-headline leading-none tabular-nums">
+        <span className="text-3xl font-black font-headline leading-none tabular-nums">
           {num ?? '—'}
         </span>
       )}
       {/* 倒计时小号紧贴，剩余少时不变色（整体卡片已变色） */}
       {perNumberTime !== undefined && (
-        <span className="text-xs font-bold font-mono opacity-90 tabular-nums">
+        <span className="text-sm font-bold font-mono opacity-90 tabular-nums">
           {perNumberTime.toFixed(1)}s
         </span>
       )}
@@ -208,7 +226,7 @@ export function SchulteGrid({
     } else {
       clickStateRef.current = { ...state, combo: 0 };
       onComboChange?.(0);
-      onWrongClick();
+      onWrongClick?.({ clicked: number, expected: currentExpected });
 
       // 错点视觉反馈：震动 + 红闪，450ms 后自动恢复
       setWrongNumber(number);
@@ -250,9 +268,13 @@ export function SchulteGrid({
                 key={number}
                 onClick={() => handleNumberClick(number)}
                 disabled={!isActive || isClicked}
+                // 震动用 framer-motion 的 x 关键帧；颜色绝不让 framer-motion 管——
+                // 关键帧动画的终值会写进 inline style，且 isWrong 变 false 时
+                // animate 里没有 backgroundColor 字段，framer-motion 不会清除它，
+                // 导致格子残留淡红。颜色只由 className 决定，wrongNumber 清空即恢复。
                 animate={
                   isWrong
-                    ? { x: [0, -6, 6, -4, 4, 0], backgroundColor: ['rgb(239 68 68 / 0.35)', 'rgb(239 68 68 / 0.15)'] }
+                    ? { x: [0, -6, 6, -4, 4, 0] }
                     : { x: 0 }
                 }
                 transition={isWrong ? { duration: 0.45 } : { duration: 0 }}
