@@ -79,9 +79,9 @@ export function QuestSchulteRunner({ difficulty, onComplete }: RunnerProps) {
         },
       };
       onComplete(result);
-      if (soundEnabled) playEffect('wrong');
+      // 错点时已经播过 wrong 音效，失败分支不再重复播放（避免声音叠加）
     }
-  }, [difficulty, maxLives, onComplete, soundEnabled, playEffect]);
+  }, [difficulty, maxLives, onComplete]);
 
   const handleCorrectClick = useCallback(() => {
     if (soundEnabled) {

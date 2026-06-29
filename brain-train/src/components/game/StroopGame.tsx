@@ -46,29 +46,38 @@ export function StroopGame({
     return mode;
   }, [mode, currentQuestion]);
 
-  // 每题限时（currentQuestion 变化即新题）：超时算错
+  // 每题限时（currentQuestion 变化即新题）：超时算错。
+  // 用 deadline + interval 让 timeLeft 每秒递减（之前只有 setTimeout，界面恒显示初始秒数）。
+  // 依赖含 isActive：暂停（isActive→false）时清理计时器，避免用旧题目触发超时。
   useEffect(() => {
     if (!timePerQuestion || !isActive) {
       setTimeLeft(null);
       return;
     }
+    const deadline = Date.now() + timePerQuestion * 1000;
     setTimeLeft(timePerQuestion);
-    const timer = setTimeout(() => {
-      // 超时算错
-      const correctAnswer = rule === 'standard' ? current.wordColorName : current.word;
-      onAnswer({
-        word: current.word,
-        wordColor: current.wordColorName,
-        userAnswer: '',
-        reactionTime: timePerQuestion * 1000,
-        isCorrect: false,
-        correctAnswer,
-        rule,
-      });
-    }, timePerQuestion * 1000);
-    return () => clearTimeout(timer);
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        // 超时算错。current/rule 在闭包内，但本 effect 在 currentQuestion 变化时重跑，
+        // 闭包值与当前题一致。
+        const correctAnswer = rule === 'standard' ? current.wordColorName : current.word;
+        onAnswer({
+          word: current.word,
+          wordColor: current.wordColorName,
+          userAnswer: '',
+          reactionTime: timePerQuestion * 1000,
+          isCorrect: false,
+          correctAnswer,
+          rule,
+        });
+      }
+    }, 250); // 250ms 轮询，保证最后 1 秒能及时归零
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQuestion, timePerQuestion]);
+  }, [currentQuestion, timePerQuestion, isActive]);
 
   // 生成当前题目
   const current = useMemo(() => {

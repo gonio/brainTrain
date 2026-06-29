@@ -136,6 +136,15 @@ describe('applyResult', () => {
     expect(updated.progress).toEqual(initial.progress);
     expect(updated.stars).toEqual(initial.stars);
   });
+
+  it('失败（passed:false）返回新引用（不可变，避免 React state 误判无更新）', () => {
+    const initial = createInitialProgress();
+    const updated = applyResult(initial, result({ gameId: 'stroop', difficulty: 2, passed: false, stars: 0 }));
+    // 引用必须不同，否则 setProgress(updated) 会被 React Object.is 判为无变化而跳过渲染
+    expect(updated).not.toBe(initial);
+    expect(updated.progress).not.toBe(initial.progress);
+    expect(updated.stars).not.toBe(initial.stars);
+  });
 });
 
 describe('isCleared', () => {
