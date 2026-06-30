@@ -57,7 +57,7 @@ export function StroopGame({
     const deadline = Date.now() + timePerQuestion * 1000;
     setTimeLeft(timePerQuestion);
     const interval = setInterval(() => {
-      const remaining = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setTimeLeft(remaining);
       if (remaining <= 0) {
         clearInterval(interval);
