@@ -27,6 +27,9 @@ export function QuestSchulteRunner({ difficulty, onComplete }: RunnerProps) {
   // 用 ref 聚合分散回调，避免 SchulteGrid 的 onComplete 无参数问题
   const maxComboRef = useRef(0);
   const errorCountRef = useRef(0);
+  // state 与 ref 同步，驱动 QuestHUD 实时重渲染
+  const [errorCount, setErrorCount] = useState(0);
+  const [combo, setCombo] = useState(0);
   // 错点明细：结算时进 details，供结算页展示「点了X / 应点Y」对比
   const errorsRef = useRef<{ clicked: number; expected: number }[]>([]);
   // 失败/完成后停止棋盘点击
@@ -51,13 +54,15 @@ export function QuestSchulteRunner({ difficulty, onComplete }: RunnerProps) {
     ? currentDir
     : FIXED_DIR[direction] ?? null;
 
-  const handleComboChange = useCallback((combo: number) => {
-    if (combo > maxComboRef.current) maxComboRef.current = combo;
+  const handleComboChange = useCallback((newCombo: number) => {
+    if (newCombo > maxComboRef.current) maxComboRef.current = newCombo;
+    setCombo(newCombo);
   }, []);
 
   const handleWrongClick = useCallback((info: { clicked: number; expected: number }) => {
     if (completedRef.current) return; // 已结算（含失败），忽略后续点击
     errorCountRef.current += 1;
+    setErrorCount(errorCountRef.current);
     errorsRef.current.push(info);
     if (soundEnabled) {
       playEffect('wrong');
@@ -102,15 +107,15 @@ export function QuestSchulteRunner({ difficulty, onComplete }: RunnerProps) {
     completedRef.current = true;
     setStopped(true);
     const maxCombo = maxComboRef.current;
-    const errorCount = errorCountRef.current;
+    const finalErrorCount = errorCountRef.current;
     const stars = computeStars({
       passed: true,
       maxCombo,
-      errorCount,
+      errorCount: finalErrorCount,
       comboTarget: level.comboTarget ?? 10,
     });
     // 分数：基础分(100×难度) + combo 奖励；仅展示用
-    const score = Math.round(100 * difficulty + maxCombo * 5 - errorCount * 3);
+    const score = Math.round(100 * difficulty + maxCombo * 5 - finalErrorCount * 3);
 
     const result: QuestResult = {
       gameId: 'schulte',
@@ -118,7 +123,7 @@ export function QuestSchulteRunner({ difficulty, onComplete }: RunnerProps) {
       passed: true,
       stars,
       score: Math.max(0, score),
-      details: { maxCombo, errorCount, errors: errorsRef.current },
+      details: { maxCombo, errorCount: finalErrorCount, errors: errorsRef.current },
     };
     onComplete(result);
     if (soundEnabled) {
@@ -131,8 +136,8 @@ export function QuestSchulteRunner({ difficulty, onComplete }: RunnerProps) {
       <QuestHUD
         level={difficulty}
         direction={direction}
-        lives={Math.max(0, maxLives - errorCountRef.current)}
-        combo={0}
+        lives={Math.max(0, maxLives - errorCount)}
+        combo={combo}
       />
       <SchulteGrid
         gridSize={gridSize}
