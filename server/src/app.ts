@@ -6,6 +6,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { config } from './config.js';
 import { authRouter } from './auth/authRoutes.js';
 import { attachAuthMiddleware } from './realtime/socketAuth.js';
+import { attachRoomHandlers } from './rooms/index.js';
 
 export interface AppBundle {
   app: Express;
@@ -33,6 +34,7 @@ export function buildApp(): AppBundle {
     cors: { origin: config.corsOrigin },
   });
   attachAuthMiddleware(io);
+  attachRoomHandlers(io);
 
   return { app, httpServer, io };
 }
