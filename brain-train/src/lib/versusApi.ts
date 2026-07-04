@@ -1,0 +1,26 @@
+// 多人对战 REST 客户端：封装 fetch，自动带 token 头
+import type { AuthResult, VersusUser } from '../types/versus';
+
+// 后端地址：开发环境走 vite 代理或直连，生产走同源 /api
+const API_BASE = import.meta.env.VITE_VERSUS_API_BASE ?? 'http://localhost:3001';
+
+// 建匿名账号
+export async function createAnonymous(): Promise<AuthResult> {
+  const res = await fetch(`${API_BASE}/api/auth/anonymous`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(`建号失败: ${res.status}`);
+  return res.json();
+}
+
+// 查当前用户（用已有 token）
+export async function getMe(token: string): Promise<VersusUser> {
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`token 校验失败: ${res.status}`);
+  const data = await res.json();
+  return data.user;
+}
+
+export const versusApi = { createAnonymous, getMe };
