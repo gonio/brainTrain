@@ -1,17 +1,4 @@
-// 测试 setup：设置 NODE_ENV，每条测试前清表
+// 全局测试 setup：仅设置环境变量，不依赖数据库。
+// 纯逻辑测试（如 authService）无需 Postgres 即可运行。
+// 需要 DB 生命周期的测试文件应显式 import './setupDb.js'。
 process.env.NODE_ENV = 'test';
-
-import { afterAll, beforeAll, beforeEach } from 'vitest';
-import { pool, initSchema, clearTables } from '../src/db.js';
-
-beforeAll(async () => {
-  await initSchema();
-});
-
-beforeEach(async () => {
-  await clearTables();
-});
-
-afterAll(async () => {
-  await pool.end();
-});

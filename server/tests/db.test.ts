@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import './setupDb.js';
 import { pool } from '../src/db.js';
 
 describe('数据库连接', () => {
