@@ -20,5 +20,6 @@ export async function initSchema(): Promise<void> {
 
 // 测试用：清空所有表（每个 test 前调用）
 export async function clearTables(): Promise<void> {
+  await pool.query('TRUNCATE TABLE matches CASCADE');
   await pool.query('TRUNCATE TABLE users CASCADE');
 }
