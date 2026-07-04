@@ -7,6 +7,7 @@ declare module 'socket.io' {
   interface Socket {
     userId?: string;
     userName?: string;
+    userAvatar?: string;
   }
 }
 
@@ -27,6 +28,7 @@ export function attachAuthMiddleware(io: SocketIOServer): void {
     // 把用户信息挂到 socket 上，后续房间/对战逻辑用
     socket.userId = user.id;
     socket.userName = user.username;
+    socket.userAvatar = user.avatar;
     next();
   });
 }
