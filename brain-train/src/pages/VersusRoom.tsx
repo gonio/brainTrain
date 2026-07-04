@@ -1,0 +1,150 @@
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import { useVersusRoomStore } from '../stores/versusRoomStore';
+import { getSocket } from '../lib/versusSocket';
+import { VersusSchulteBoard, PlayerProgress, RoomHUD, CountdownOverlay, VersusResultDialog } from '../components/versus';
+import type { RoomStatePayload, CountdownPayload, GameStartPayload, GameProgressPayload, GameEndPayload, RoomErrorPayload } from '../types/versus';
+
+export function VersusRoom() {
+  // roomId 来自路由，房间身份由 socket 状态携带（此处保留路由契约）
+  const { roomId: _roomId } = useParams<{ roomId: string }>();
+  void _roomId;
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const {
+    view, room, countdown, gameData, progress, endResult, error,
+    setRoomState, setCountdown, onGameStart, onGameProgress, onGameEnd, setError, reset,
+  } = useVersusRoomStore();
+
+  // 注册所有 socket 事件（进页一次）
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handlers: Record<string, (data: unknown) => void> = {
+      'room:state': (d) => setRoomState(d as RoomStatePayload),
+      'room:countdown': (d) => setCountdown((d as CountdownPayload).remaining),
+      'game:start': (d) => onGameStart(d as GameStartPayload),
+      'game:progress': (d) => onGameProgress(d as GameProgressPayload),
+      'game:end': (d) => onGameEnd(d as GameEndPayload),
+      'room:error': (d) => setError((d as RoomErrorPayload).message),
+    };
+    for (const [event, handler] of Object.entries(handlers)) {
+      socket.on(event, handler);
+    }
+
+    return () => {
+      for (const event of Object.keys(handlers)) {
+        socket.off(event);
+      }
+    };
+  }, [setRoomState, setCountdown, onGameStart, onGameProgress, onGameEnd, setError]);
+
+  const myUserId = user?.id ?? '';
+  const me = room?.players.find((p) => p.id === myUserId);
+  const opponent = room?.players.find((p) => p.id !== myUserId);
+  const isHost = me?.isHost ?? false;
+  const allReady = room?.players.every((p) => p.ready) ?? false;
+  const isFull = (room?.players.length ?? 0) >= 2;
+
+  const handleToggleReady = () => {
+    getSocket()?.emit('player:ready', { ready: !me?.ready });
+  };
+
+  const handleStart = () => {
+    getSocket()?.emit('room:start');
+  };
+
+  const handleTap = (cellIndex: number) => {
+    getSocket()?.emit('game:tap', { cellIndex });
+  };
+
+  const handlePlayAgain = () => {
+    // 服务器 endGame 已把房间回 ready/waiting，回大厅重新进
+    reset();
+    navigate('/versus');
+  };
+
+  const handleExit = () => {
+    getSocket()?.emit('room:leave');
+    reset();
+    navigate('/versus');
+  };
+
+  // ===== 按 view 分发渲染 =====
+
+  if (view === 'result' && endResult) {
+    return <VersusResultDialog result={endResult} onPlayAgain={handlePlayAgain} onExit={handleExit} />;
+  }
+
+  if (view === 'playing' && gameData) {
+    const myProg = progress?.me ?? { found: 0, errors: 0, done: false };
+    const opProg = progress?.opponent ?? { found: 0, errors: 0, done: false };
+    return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <PlayerProgress
+            name={me?.name ?? '我'} avatar={me?.avatar ?? '❓'}
+            found={myProg.found} errors={myProg.errors} target={gameData.target}
+            isMe done={myProg.done}
+          />
+          <PlayerProgress
+            name={opponent?.name ?? '对手'} avatar={opponent?.avatar ?? '❓'}
+            found={opProg.found} errors={opProg.errors} target={gameData.target}
+            isMe={false} done={opProg.done}
+          />
+        </div>
+        <VersusSchulteBoard grid={gameData.grid} size={gameData.size} onTap={handleTap} />
+      </div>
+    );
+  }
+
+  // view === 'ready' 或 'countdown'（countdown 时仍显示房间界面 + 遮罩）
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="bg-destructive/10 text-destructive p-3 rounded-xl text-sm">{error}</div>
+      )}
+
+      {room && <RoomHUD roomId={room.roomId} players={room.players} myUserId={myUserId} />}
+
+      <div className="text-center py-4">
+        <p className="text-muted-foreground">
+          {isFull ? (allReady ? '房主可以开始游戏了' : '等待所有玩家准备…') : '等待对手加入…'}
+        </p>
+      </div>
+
+      {/* 准备/开始按钮 */}
+      <div className="space-y-3">
+        {!isHost && (
+          <button
+            onClick={handleToggleReady}
+            className={`w-full py-4 font-bold text-lg rounded-2xl transition-opacity ${
+              me?.ready ? 'bg-success text-success-foreground' : 'bg-primary text-primary-foreground'
+            }`}
+          >
+            {me?.ready ? '✓ 已准备（点击取消）' : '准备'}
+          </button>
+        )}
+        {isHost && (
+          <button
+            onClick={handleStart}
+            disabled={!isFull || !allReady}
+            className="w-full py-4 bg-primary text-primary-foreground font-bold text-lg rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isFull && allReady ? '开始游戏' : '等待准备…'}
+          </button>
+        )}
+        <button
+          onClick={handleExit}
+          className="w-full py-3 bg-surface-container text-foreground font-bold rounded-2xl hover:bg-surface-container-high transition-colors"
+        >
+          离开房间
+        </button>
+      </div>
+
+      <CountdownOverlay remaining={countdown} />
+    </div>
+  );
+}
