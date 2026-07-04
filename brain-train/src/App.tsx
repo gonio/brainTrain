@@ -14,6 +14,9 @@ import { Stroop } from './pages/games/Stroop';
 import { Sequence } from './pages/games/Sequence';
 import { Bottle } from './pages/games/Bottle';
 import { Quest } from './pages/Quest';
+import { Versus } from './pages/Versus';
+import { VersusRoom } from './pages/VersusRoom';
+import { Leaderboard } from './pages/Leaderboard';
 import { ErrorBoundary } from './components/error-boundary/ErrorBoundary';
 import { Onboarding } from './components/onboarding/Onboarding';
 import { getGreeting } from './lib/greeting';
@@ -141,6 +144,22 @@ function Home() {
               <p className="text-primary-foreground/80 text-sm">4 个游戏随机串联，由易到难，40 关挑战</p>
             </div>
             <span className="material-symbols-outlined text-4xl">arrow_forward</span>
+          </div>
+        </button>
+      </section>
+
+      {/* 多人对战入口 */}
+      <section className="mb-8">
+        <button
+          onClick={() => navigate('/versus')}
+          className="w-full p-6 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-3xl text-left hover:opacity-95 transition-opacity shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-headline text-2xl font-extrabold mb-1">多人对战</h2>
+              <p className="text-white/80 text-sm">实时 1v1 舒尔特竞速，比比谁更快</p>
+            </div>
+            <span className="material-symbols-outlined text-4xl">swords</span>
           </div>
         </button>
       </section>
@@ -298,6 +317,9 @@ export const router = createBrowserRouter([
       { path: 'insights', element: <Insights /> },
       { path: 'settings', element: <Settings /> },
       { path: 'profile', element: <Profile /> },
+      { path: 'versus', element: <Versus /> },
+      { path: 'versus/room/:roomId', element: <VersusRoom /> },
+      { path: 'leaderboard', element: <Leaderboard /> },
       { path: 'games/schulte', element: <Schulte /> },
       { path: 'games/stroop', element: <Stroop /> },
       { path: 'games/sequence', element: <Sequence /> },
