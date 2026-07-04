@@ -96,3 +96,32 @@ export interface CountdownPayload {
 export interface RoomErrorPayload {
   message: string;
 }
+
+// ============ 排行榜类型 ============
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  avatar: string;
+  matchesPlayed: number;
+  avgAccuracy: number;
+  avgTimeMs: number;
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  myEntry: LeaderboardEntry | null;
+}
+
+export interface MyStats {
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  avgAccuracy: number;
+  avgTimeMs: number;
+}
