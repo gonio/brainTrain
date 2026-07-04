@@ -61,7 +61,8 @@ describe('authMiddleware（Bearer token 校验）', () => {
 
     const res = await request(app)
       .get('/api/auth/me')
-      .set('Authorization', 'Bearer 无效token');
+      // 注意：HTTP header 不允许非 ASCII 字符，用 ASCII 字符串模拟无效 token
+      .set('Authorization', 'Bearer invalid-token');
 
     expect(res.status).toBe(401);
   });
