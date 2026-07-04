@@ -139,7 +139,7 @@ describe('房间系统集成', () => {
     expect(after.players.some((p) => p.ready === false)).toBe(true);
   });
 
-  it('房主开始 → countdown → 倒计时事件 → 回 ready（计划二占位）', async () => {
+  it('房主开始 → countdown → 倒计时事件 → 进 playing + game:start', async () => {
     await setup();
     const host = await client();
     const guest = await client();
@@ -148,13 +148,22 @@ describe('房间系统集成', () => {
     guest.emit('room:join', { roomId: st.roomId });
     await waitFor(host, 'room:state'); // ready
 
+    // 房主开始：先收 countdown
+    const hostCdP = expectEvent<{ remaining: number }>(host, 'room:countdown');
+    const guestCdP = expectEvent<{ remaining: number }>(guest, 'room:countdown');
     host.emit('room:start');
-    const cd1 = await waitFor<{ remaining: number }>(host, 'room:countdown');
+    const cd1 = await hostCdP;
     expect(cd1.remaining).toBe(3);
+    await guestCdP;
 
-    const finalState = await waitFor<{ state: string }>(host, 'room:state', 5000);
-    expect(finalState.state).toBe('ready');
-  }, 10000);
+    // countdown 结束（3s）→ 进 playing，双方收 game:start
+    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start');
+    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start');
+    const hostStart = await hostStartP;
+    const guestStart = await guestStartP;
+    expect(hostStart.target).toBe(25);
+    expect(hostStart.grid).toEqual(guestStart.grid); // 同一张表
+  }, 15000);
 
   it('非房主点开始被拒', async () => {
     await setup();
