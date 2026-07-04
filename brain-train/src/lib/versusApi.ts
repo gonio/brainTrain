@@ -1,8 +1,8 @@
 // 多人对战 REST 客户端：封装 fetch，自动带 token 头
 import type { AuthResult, VersusUser } from '../types/versus';
 
-// 后端地址：开发环境走 vite 代理或直连，生产走同源 /api
-const API_BASE = import.meta.env.VITE_VERSUS_API_BASE ?? 'http://localhost:3001';
+// 开发环境连本地后端（3001），生产环境同源（Nginx 反代 /api）
+const API_BASE = import.meta.env.DEV ? 'http://localhost:3001' : '';
 
 // 建匿名账号
 export async function createAnonymous(): Promise<AuthResult> {

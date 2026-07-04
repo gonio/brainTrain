@@ -1,7 +1,7 @@
 // Socket.IO 连接管理：单例连接，带 token 鉴权
 import { io, type Socket } from 'socket.io-client';
 
-const SOCKET_BASE = import.meta.env.VITE_VERSUS_API_BASE ?? 'http://localhost:3001';
+const SOCKET_BASE = import.meta.env.DEV ? 'http://localhost:3001' : '';
 
 let socket: Socket | null = null;
 
