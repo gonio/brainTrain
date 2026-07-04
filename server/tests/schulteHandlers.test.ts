@@ -87,8 +87,9 @@ describe('舒尔特对战集成', () => {
     guest.emit('room:join', { roomId: st.roomId });
     await expectEvent(host, 'room:state'); // ready
 
-    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start');
-    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start');
+    // countdown 跑 3 秒（3→2→1→0）才发 game:start，给 6 秒余量避免边界竞态
+    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start', 6000);
+    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start', 6000);
     host.emit('room:start');
     const hostStart = await hostStartP;
     const guestStart = await guestStartP;

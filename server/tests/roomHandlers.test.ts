@@ -156,9 +156,9 @@ describe('房间系统集成', () => {
     expect(cd1.remaining).toBe(3);
     await guestCdP;
 
-    // countdown 结束（3s）→ 进 playing，双方收 game:start
-    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start');
-    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start');
+    // countdown 结束（3s）→ 进 playing，双方收 game:start（给 6s 余量）
+    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start', 6000);
+    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start', 6000);
     const hostStart = await hostStartP;
     const guestStart = await guestStartP;
     expect(hostStart.target).toBe(25);

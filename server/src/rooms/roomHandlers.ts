@@ -275,8 +275,10 @@ export function attachRoomHandlers(io: SocketIOServer): void {
   function checkGameEnd(roomId: string): void {
     const game = games.get(roomId);
     if (!game || game.ended) return;
-    const allDone = [...game.players.values()].every((p) => p.done);
-    if (allDone) {
+    // 任一方点完即结束（先点完的赢，符合竞速产品意图）。
+    // 另一方按当前进度结算（没点完的补齐 errors）。
+    const anyDone = [...game.players.values()].some((p) => p.done);
+    if (anyDone) {
       const room = store.findByPlayerId([...game.players.keys()][0]);
       if (room) endGame(room, 'completed');
     }
