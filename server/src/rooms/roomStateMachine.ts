@@ -7,7 +7,8 @@ const TRANSITIONS: Record<RoomState, RoomState[]> = {
   ready: ['waiting', 'countdown', 'closed'],
   countdown: ['ready', 'playing', 'closed'],
   playing: ['finished', 'closed'],
-  finished: ['closed'],
+  // finished 是过渡态：裁定完直接回到 waiting/ready 以便重开
+  finished: ['waiting', 'ready', 'closed'],
   closed: [],
 };
 

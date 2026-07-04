@@ -28,6 +28,14 @@ describe('roomStateMachine', () => {
       expect(canTransition('playing', 'finished')).toBe(true);
     });
 
+    it('finished → ready 合法（裁定完重开）', () => {
+      expect(canTransition('finished', 'ready')).toBe(true);
+    });
+
+    it('finished → waiting 合法（裁定完重开）', () => {
+      expect(canTransition('finished', 'waiting')).toBe(true);
+    });
+
     it('任意 → closed 合法（销毁）', () => {
       expect(canTransition('waiting', 'closed')).toBe(true);
       expect(canTransition('playing', 'closed')).toBe(true);

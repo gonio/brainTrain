@@ -6,12 +6,24 @@ import { createLobbyService } from './lobbyService.js';
 import { createMatchService } from './matchService.js';
 import { canTransition, nextWaitingState } from './roomStateMachine.js';
 import { toPublicRoom, isFull, allReady, toRoomStatePayload, makeRoomName } from './roomHelpers.js';
+import { generateGrid, applyTap, finalizeProgress, determineWinner } from '../schulte/schulteGame.js';
+import { createGameStore } from '../schulte/gameStore.js';
+import type { PlayerResult, GameEndPayload, RoomGame } from '../types/schulte.js';
 
 const COUNTDOWN_SECONDS = 3;
 const MATCH_TIMEOUT_MS = 30000;
+const GRID_SIZE = 5;
+const TIME_LIMIT_MS = 90000;
+const PROGRESS_INTERVAL_MS = 500;
 
 export function attachRoomHandlers(io: SocketIOServer): void {
   const store = createRoomStore();
+  const games = createGameStore();
+  // 房间级定时器：roomId → { progress, timeLimit }，结束时清理
+  const roomTimers = new Map<string, {
+    progress: ReturnType<typeof setInterval>;
+    timeLimit: ReturnType<typeof setTimeout>;
+  }>();
   const lobby = createLobbyService((socketId, event, payload) => {
     io.to(socketId).emit(event, payload);
   });
@@ -124,6 +136,27 @@ export function attachRoomHandlers(io: SocketIOServer): void {
       if (pub) lobby.broadcastRoomChanged(pub);
     });
 
+    // ===== 游戏中点击 =====
+    socket.on('game:tap', (input: { cellIndex: number }) => {
+      const room = store.findByPlayerId(userId);
+      if (!room) return;
+      const game = games.get(room.roomId);
+      if (!game || game.ended) return;
+      const prog = game.players.get(userId);
+      if (!prog || prog.done) return;
+
+      const result = applyTap(game.grid, prog, input.cellIndex, game.target);
+      games.updateProgress(game.roomId, userId, {
+        found: result.progress.found,
+        errors: result.progress.errors,
+        done: result.progress.done,
+        finishTime: result.progress.finishTime,
+      });
+
+      // 双方都 done → 结束
+      checkGameEnd(game.roomId);
+    });
+
     // ===== 房主开始 =====
     socket.on('room:start', () => {
       const room = store.findByPlayerId(userId);
@@ -152,13 +185,8 @@ export function attachRoomHandlers(io: SocketIOServer): void {
           io.to(room.roomId).emit('room:countdown', { remaining });
         } else {
           clearInterval(timer);
-          // 计划二占位：countdown 结束回 ready（计划三改为进 playing + game:start）
-          if (canTransition('countdown', 'ready')) {
-            room.state = 'ready';
-            broadcastRoomState(io, room);
-            const pub = toPublicRoom(room);
-            if (pub) lobby.broadcastRoomAdded(pub);
-          }
+          // countdown 结束 → 开始游戏（计划三）
+          startGame(room);
         }
       }, 1000);
     });
@@ -167,9 +195,177 @@ export function attachRoomHandlers(io: SocketIOServer): void {
     socket.on('disconnect', () => {
       lobby.unsubscribe(socket.id);
       match.cancel(userId);
+      // 游戏中断线：判该方弃赛负
+      const room = store.findByPlayerId(userId);
+      if (room) {
+        const game = games.get(room.roomId);
+        if (game && !game.ended) {
+          endGame(room, 'disconnect', userId);
+        }
+      }
       removePlayer(io, socket, store, lobby, userId);
     });
   });
+
+  // 开始一局游戏：生成表、广播 game:start、启动进度广播 + 时间上限定时器
+  function startGame(room: Room): void {
+    if (!canTransition(room.state, 'playing')) return;
+    room.state = 'playing';
+    broadcastRoomState(io, room);
+
+    const grid = generateGrid(GRID_SIZE);
+    const playerIds = room.players.map((p) => p.id);
+    const startTime = Date.now();
+    const game = games.create({
+      roomId: room.roomId,
+      grid,
+      startTime,
+      timeLimitMs: TIME_LIMIT_MS,
+      target: grid.length,
+      playerIds,
+    });
+
+    io.to(room.roomId).emit('game:start', {
+      grid,
+      startTime,
+      size: GRID_SIZE,
+      target: grid.length,
+      timeLimitMs: TIME_LIMIT_MS,
+    });
+
+    // 进度广播定时器：每 500ms 下发双方进度（每人收 me+opponent 视角）
+    const progressTimer = setInterval(() => {
+      broadcastProgress(game.roomId);
+    }, PROGRESS_INTERVAL_MS);
+
+    // 时间上限定时器：到点强制结算
+    const timeLimitTimer = setTimeout(() => {
+      const g = games.get(game.roomId);
+      if (g && !g.ended) {
+        endGame(room, 'timeout');
+      }
+    }, TIME_LIMIT_MS);
+
+    roomTimers.set(room.roomId, { progress: progressTimer, timeLimit: timeLimitTimer });
+  }
+
+  // 广播进度给房间双方（每人收到 me + opponent 视角）
+  function broadcastProgress(roomId: string): void {
+    const game = games.get(roomId);
+    if (!game || game.ended) return;
+    const playerIds = [...game.players.keys()];
+    if (playerIds.length !== 2) return;
+    const [aId, bId] = playerIds;
+    const pa = game.players.get(aId)!;
+    const pb = game.players.get(bId)!;
+
+    const sockA = findSocketByUserId(io, aId);
+    sockA?.emit('game:progress', {
+      me: { found: pa.found, errors: pa.errors, done: pa.done },
+      opponent: { found: pb.found, errors: pb.errors, done: pb.done },
+    });
+    const sockB = findSocketByUserId(io, bId);
+    sockB?.emit('game:progress', {
+      me: { found: pb.found, errors: pb.errors, done: pb.done },
+      opponent: { found: pa.found, errors: pa.errors, done: pa.done },
+    });
+  }
+
+  // 检查游戏是否结束（双方都 done）
+  function checkGameEnd(roomId: string): void {
+    const game = games.get(roomId);
+    if (!game || game.ended) return;
+    const allDone = [...game.players.values()].every((p) => p.done);
+    if (allDone) {
+      const room = store.findByPlayerId([...game.players.keys()][0]);
+      if (room) endGame(room, 'completed');
+    }
+  }
+
+  // 结束游戏：裁定胜负、广播 game:end、清理定时器、房间回 waiting/ready
+  function endGame(
+    room: Room,
+    reason: 'completed' | 'timeout' | 'disconnect',
+    loserId?: string,
+  ): void {
+    const game = games.get(room.roomId);
+    if (!game || game.ended) return;
+    game.ended = true;
+    games.markEnded(room.roomId);
+
+    // 清理定时器
+    const timers = roomTimers.get(room.roomId);
+    if (timers) {
+      clearInterval(timers.progress);
+      clearTimeout(timers.timeLimit);
+      roomTimers.delete(room.roomId);
+    }
+
+    const playerIds = [...game.players.keys()];
+    if (playerIds.length !== 2) {
+      games.remove(room.roomId);
+      return;
+    }
+    const [aId, bId] = playerIds;
+
+    let aResult: PlayerResult;
+    let bResult: PlayerResult;
+
+    if (reason === 'disconnect' && loserId) {
+      // 断线判负：弃赛方 won=false 且 accuracy=0
+      const loserIsA = loserId === aId;
+      aResult = buildResultForDisconnect(game, aId, !loserIsA);
+      bResult = buildResultForDisconnect(game, bId, loserIsA);
+    } else {
+      // 正常结算或超时：按正确率/时间裁定
+      const aFinal = finalizeProgress(game.players.get(aId)!, game.target, game.timeLimitMs, game.startTime);
+      const bFinal = finalizeProgress(game.players.get(bId)!, game.target, game.timeLimitMs, game.startTime);
+      const winnerFromA = determineWinner(aFinal, bFinal); // 'me'|'opponent'|'draw'（a 视角）
+      const aWon = winnerFromA === 'me';
+      const bWon = winnerFromA === 'opponent';
+      aResult = { playerId: aId, found: aFinal.found, errors: aFinal.errors, accuracy: aFinal.accuracy, timeMs: aFinal.timeMs, done: aFinal.done, won: aWon };
+      bResult = { playerId: bId, found: bFinal.found, errors: bFinal.errors, accuracy: bFinal.accuracy, timeMs: bFinal.timeMs, done: bFinal.done, won: bWon };
+    }
+
+    // 给双方发 game:end（各自「我」视角）
+    emitGameEndTo(aId, aResult, bResult);
+    emitGameEndTo(bId, bResult, aResult);
+
+    // 清理游戏 + 房间回 waiting/ready（可重开）
+    games.remove(room.roomId);
+    const newState = nextWaitingState(room);
+    // playing → finished → newState（finished 是过渡态，直接到 newState）
+    room.state = 'finished';
+    if (canTransition('finished', newState)) {
+      room.state = newState;
+    }
+    broadcastRoomState(io, room);
+    const pub = toPublicRoom(room);
+    if (pub) lobby.broadcastRoomAdded(pub);
+  }
+
+  // 断线判负的结果：弃赛方 accuracy=0 won=false
+  function buildResultForDisconnect(game: RoomGame, playerId: string, won: boolean): PlayerResult {
+    const prog = game.players.get(playerId)!;
+    const final = finalizeProgress(prog, game.target, game.timeLimitMs, game.startTime);
+    return {
+      playerId,
+      found: final.found,
+      errors: final.errors,
+      accuracy: won ? final.accuracy : 0,
+      timeMs: final.timeMs,
+      done: final.done,
+      won,
+    };
+  }
+
+  // 给某玩家发 game:end（带「我」视角）
+  function emitGameEndTo(viewerId: string, myResult: PlayerResult, opponentResult: PlayerResult): void {
+    const winner: 'me' | 'opponent' | 'draw' = myResult.won ? 'me' : (opponentResult.won ? 'opponent' : 'draw');
+    const payload: GameEndPayload = { winner, myResult, opponentResult };
+    const sock = findSocketByUserId(io, viewerId);
+    sock?.emit('game:end', payload);
+  }
 }
 
 // ===== 辅助函数 =====
