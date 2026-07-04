@@ -5,6 +5,7 @@ import { createServer, type Server as HttpServer } from 'node:http';
 import { Server as SocketIOServer } from 'socket.io';
 import { config } from './config.js';
 import { authRouter } from './auth/authRoutes.js';
+import { leaderboardRouter } from './stats/leaderboardRoutes.js';
 import { attachAuthMiddleware } from './realtime/socketAuth.js';
 import { attachRoomHandlers } from './rooms/index.js';
 
@@ -27,6 +28,9 @@ export function buildApp(): AppBundle {
 
   // Auth 路由
   app.use('/api/auth', authRouter);
+
+  // 排行榜 + 个人统计
+  app.use('/api', leaderboardRouter);
 
   // HTTP server + Socket.IO（共享）
   const httpServer = createServer(app);

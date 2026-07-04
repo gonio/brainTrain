@@ -8,6 +8,7 @@ import { canTransition, nextWaitingState } from './roomStateMachine.js';
 import { toPublicRoom, isFull, allReady, toRoomStatePayload, makeRoomName } from './roomHelpers.js';
 import { generateGrid, applyTap, finalizeProgress, determineWinner } from '../schulte/schulteGame.js';
 import { createGameStore } from '../schulte/gameStore.js';
+import { recordMatch, type MatchPlayerInput } from '../stats/statsRepository.js';
 import type { PlayerResult, GameEndPayload, RoomGame } from '../types/schulte.js';
 
 const COUNTDOWN_SECONDS = 3;
@@ -332,6 +333,22 @@ export function attachRoomHandlers(io: SocketIOServer): void {
     // 给双方发 game:end（各自「我」视角）
     emitGameEndTo(aId, aResult, bResult);
     emitGameEndTo(bId, bResult, aResult);
+
+    // >>> 新增：写战绩（异步 fire-and-forget，不阻塞游戏流程）<<<
+    const playerA = room.players.find((p) => p.id === aId);
+    const playerB = room.players.find((p) => p.id === bId);
+    const playersForStats: MatchPlayerInput[] = [
+      { playerId: aId, name: playerA?.name ?? '未知', avatar: playerA?.avatar ?? '❓', found: aResult.found, errors: aResult.errors, accuracy: aResult.accuracy, timeMs: aResult.timeMs, done: aResult.done, won: aResult.won },
+      { playerId: bId, name: playerB?.name ?? '未知', avatar: playerB?.avatar ?? '❓', found: bResult.found, errors: bResult.errors, accuracy: bResult.accuracy, timeMs: bResult.timeMs, done: bResult.done, won: bResult.won },
+    ];
+    const winnerId = aResult.won ? aId : bResult.won ? bId : null;
+    recordMatch({
+      roomId: room.roomId,
+      gameMode: 'schulte',
+      winnerId,
+      players: playersForStats,
+    }).catch((err) => console.error('[stats] 战绩写入失败:', err));
+    // <<< 新增结束 >>>
 
     // 清理游戏 + 房间回 waiting/ready（可重开）
     games.remove(room.roomId);
