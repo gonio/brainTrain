@@ -8,6 +8,8 @@ export class BrainTrainDB extends Dexie {
   dailyGoals!: Table<DailyGoal>;
   schulteQuestProgress!: Table<SchulteQuestProgress>;
   questProgress!: Table<QuestProgress>;
+  // 多人对战 token 表（singleton，id 固定 'current'）
+  versusAuth!: Table<{ id: string; token: string; userId: string }>;
 
   constructor() {
     super('BrainTrainDB');
@@ -42,6 +44,16 @@ export class BrainTrainDB extends Dexie {
       dailyGoals: 'date',
       schulteQuestProgress: 'id',
       questProgress: 'id',
+    });
+
+    // v5: 新增多人对战 token 表（singleton，id 固定 'current'）
+    this.version(5).stores({
+      userProfile: 'id',
+      trainingRecords: 'id, mode, startedAt, [mode+startedAt]',
+      dailyGoals: 'date',
+      schulteQuestProgress: 'id',
+      questProgress: 'id',
+      versusAuth: 'id',
     });
   }
 }
