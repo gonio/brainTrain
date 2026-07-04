@@ -52,6 +52,18 @@ function waitFor<T>(sock: ClientSocket, event: string, timeoutMs = 2000): Promis
   });
 }
 
+// 先注册监听器再执行动作，避免事件竞态（emit 瞬间完成、once 还没注册导致错过）
+// 用法：const p = expectEvent(sock, 'match:found'); sock.emit(...); const data = await p;
+function expectEvent<T>(sock: ClientSocket, event: string, timeoutMs = 2000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`超时等 ${event}`)), timeoutMs);
+    sock.once(event, (data: T) => {
+      clearTimeout(t);
+      resolve(data);
+    });
+  });
+}
+
 describe('房间系统集成', () => {
   let port = 0;
   let close: () => Promise<void> = () => Promise.resolve();
@@ -117,10 +129,13 @@ describe('房间系统集成', () => {
     host.emit('room:create', {});
     const st = await waitFor<{ roomId: string }>(host, 'room:state');
     guest.emit('room:join', { roomId: st.roomId });
-    await waitFor(host, 'room:state'); // ready
+    await waitFor(guest, 'room:state'); // guest 收到 join 后的 room:state（双方 ready）
 
+    // guest 取消准备。监听 host 端的 room:state（host 也会收到这次广播），
+    // 断言至少一人 ready=false。用 host 监听避免 guest 端 join 事件的残留竞态。
+    const stateP = expectEvent<{ players: { ready: boolean }[] }>(host, 'room:state');
     guest.emit('player:ready', { ready: false });
-    const after = await waitFor<{ players: { ready: boolean }[] }>(guest, 'room:state');
+    const after = await stateP;
     expect(after.players.some((p) => p.ready === false)).toBe(true);
   });
 
@@ -160,11 +175,16 @@ describe('房间系统集成', () => {
     const a = await client();
     const b = await client();
 
+    // 先注册监听再 emit，避免竞态：第二个入队会瞬间触发匹配，
+    // match:found 在 once 注册前发出会错过
+    const foundAP = expectEvent<{ opponent: { name: string } }>(a, 'match:found');
+    const foundBP = expectEvent<{ opponent: { name: string } }>(b, 'match:found');
+
     a.emit('match:queue');
     b.emit('match:queue');
 
-    const foundA = await waitFor<{ opponent: { name: string } }>(a, 'match:found');
-    const foundB = await waitFor<{ opponent: { name: string } }>(b, 'match:found');
+    const foundA = await foundAP;
+    const foundB = await foundBP;
     expect(foundA.opponent).toBeTruthy();
     expect(foundB.opponent).toBeTruthy();
   });
