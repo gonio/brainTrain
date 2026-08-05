@@ -78,7 +78,8 @@ export function attachRoomHandlers(io: SocketIOServer): void {
 
     // ===== 快速匹配 =====
     socket.on('match:queue', () => {
-      if (store.findByPlayerId(userId)) return; // 已在房间
+      // 容错：若残留旧房间，先静默清理（前端可能未发 leave）
+      if (store.findByPlayerId(userId)) removePlayer(io, socket, store, lobby, userId);
       match.enqueue(userId, player());
     });
 
@@ -88,7 +89,8 @@ export function attachRoomHandlers(io: SocketIOServer): void {
 
     // ===== 创建房间 =====
     socket.on('room:create', (input: { name?: string } | undefined) => {
-      if (store.findByPlayerId(userId)) return;
+      // 容错：若残留旧房间，先静默清理（前端可能未发 leave）
+      if (store.findByPlayerId(userId)) removePlayer(io, socket, store, lobby, userId);
       const host: Player = { ...player(), isHost: true };
       const name = input?.name?.trim() || makeRoomName(host.name);
       const room = store.create(userId, host, { name });
@@ -100,7 +102,8 @@ export function attachRoomHandlers(io: SocketIOServer): void {
 
     // ===== 加入房间 =====
     socket.on('room:join', (input: { roomId: string }) => {
-      if (store.findByPlayerId(userId)) return;
+      // 容错：若残留旧房间，先静默清理（前端可能未发 leave）
+      if (store.findByPlayerId(userId)) removePlayer(io, socket, store, lobby, userId);
       const room = store.get(input.roomId);
       if (!room) {
         socket.emit('room:error', { message: '房间不存在' });

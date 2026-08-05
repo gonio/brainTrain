@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useVersusRoomStore } from '../stores/versusRoomStore';
@@ -13,9 +13,22 @@ export function VersusRoom() {
     view, room, countdown, gameData, progress, endResult, error, reset,
   } = useVersusRoomStore();
 
-  // 确保 socket 会话已初始化（房间页可能被直接访问，session 未建）
+  // 标记是否已通知后端离开房间。cleanup 时若未离开则补发 room:leave，
+  // 防止用户点浏览器后退/切底栏时房间残留 + 再建房被后端拦截。
+  const leftRef = useRef(false);
+  const leaveRoom = () => {
+    if (leftRef.current) return;
+    leftRef.current = true;
+    getSocket()?.emit('room:leave');
+  };
+
+  // 确保 socket 会话已初始化 + 组件卸载时离开房间
   useEffect(() => {
     initVersusSession();
+    return () => {
+      // 离开房间页（任何方式：按钮、后退、切路由）都通知后端
+      leaveRoom();
+    };
   }, []);
 
   const myUserId = user?.id ?? '';
@@ -38,12 +51,13 @@ export function VersusRoom() {
   };
 
   const handlePlayAgain = () => {
+    // 再来一局：离开当前房间（cleanup 会补发，这里不重复），回大厅
     reset();
     navigate('/versus');
   };
 
   const handleExit = () => {
-    getSocket()?.emit('room:leave');
+    leaveRoom();
     reset();
     navigate('/versus');
   };
