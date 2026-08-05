@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUserStore } from '../../stores/userStore';
+import { useAuthStore } from '../../stores/authStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { getTodayTrainingRecords } from '../../db/queries';
 import { motion } from 'framer-motion';
@@ -60,9 +61,13 @@ export function BottomNav() {
 
 export function TopBar() {
   const { profile } = useUserStore();
+  const authUser = useAuthStore((s) => s.user);
   const { dailyGoalSessions } = useSettingsStore();
   const [todaySessions, setTodaySessions] = useState(0);
   const streak = profile?.currentStreak || 0;
+  // 昵称头像优先用服务端账号（建号完成自动更新），fallback 到本地 profile
+  const displayName = authUser?.username || profile?.displayName || '用户';
+  const avatar = authUser?.avatar || profile?.avatar;
 
   // 加载今日训练次数
   useEffect(() => {
@@ -88,10 +93,10 @@ export function TopBar() {
           <Link to="/profile" className="flex items-center gap-3 group">
             <div className="relative">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
-                {profile?.avatar?.startsWith('data:image') ? (
-                  <img src={profile.avatar} alt="头像" className="w-10 h-10 rounded-full object-cover" />
+                {avatar?.startsWith('data:image') ? (
+                  <img src={avatar} alt="头像" className="w-10 h-10 rounded-full object-cover" />
                 ) : (
-                  <span className="text-lg">{profile?.avatar || '👤'}</span>
+                  <span className="text-lg">{avatar || '👤'}</span>
                 )}
               </div>
               {/* 连续训练徽章 */}
@@ -104,7 +109,7 @@ export function TopBar() {
             </div>
             <div className="flex flex-col gap-1">
               <span className="font-headline font-bold text-xl tracking-tight text-primary">
-                {profile?.displayName || '用户'}
+                {displayName}
               </span>
               {/* 每日目标进度条 */}
               <div className="flex items-center gap-2">

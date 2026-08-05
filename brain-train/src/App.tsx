@@ -21,7 +21,7 @@ import { Leaderboard } from './pages/Leaderboard';
 import { ErrorBoundary } from './components/error-boundary/ErrorBoundary';
 import { Onboarding } from './components/onboarding/Onboarding';
 import { getGreeting } from './lib/greeting';
-import { getTrainingRecords, getUserProfile } from './db/queries';
+import { getTrainingRecords } from './db/queries';
 import { calculateStreak, calculateOverallStats } from './lib/stats';
 import type { TrainingMode, TrainingRecord } from './types';
 
@@ -84,8 +84,8 @@ function getWeeklyData(records: TrainingRecord[]) {
 
 function Home() {
   const navigate = useNavigate();
+  const authUser = useAuthStore((s) => s.user);
   const [records, setRecords] = useState<TrainingRecord[]>([]);
-  const [displayName, setDisplayName] = useState('用户');
   const [streak, setStreak] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
   const [weeklyData, setWeeklyData] = useState<{day: string; score: number; sessions: number}[]>([]);
@@ -93,12 +93,8 @@ function Home() {
 
   useEffect(() => {
     const loadData = async () => {
-      const [fetchedRecords, profile] = await Promise.all([
-        getTrainingRecords(),
-        getUserProfile(),
-      ]);
+      const fetchedRecords = await getTrainingRecords();
       setRecords(fetchedRecords);
-      setDisplayName(profile.displayName || '用户');
 
       const streakData = calculateStreak(fetchedRecords);
       setStreak(streakData.current);
@@ -124,7 +120,7 @@ function Home() {
       {/* Welcome Section */}
       <section className="mb-10">
         <h1 className="font-headline text-4xl font-extrabold tracking-tight text-foreground mb-2">
-          {getGreeting()}，{displayName}
+          {getGreeting()}，{authUser?.username || '用户'}
         </h1>
         <p className="text-muted-foreground leading-relaxed font-medium">
           {records.length === 0
