@@ -1,45 +1,22 @@
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useVersusRoomStore } from '../stores/versusRoomStore';
+import { initVersusSession } from '../lib/versusSocketSession';
 import { getSocket } from '../lib/versusSocket';
 import { VersusSchulteBoard, PlayerProgress, RoomHUD, CountdownOverlay, VersusResultDialog } from '../components/versus';
-import type { RoomStatePayload, CountdownPayload, GameStartPayload, GameProgressPayload, GameEndPayload, RoomErrorPayload } from '../types/versus';
 
 export function VersusRoom() {
-  // roomId 来自路由，房间身份由 socket 状态携带（此处保留路由契约）
-  const { roomId: _roomId } = useParams<{ roomId: string }>();
-  void _roomId;
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
-    view, room, countdown, gameData, progress, endResult, error,
-    setRoomState, setCountdown, onGameStart, onGameProgress, onGameEnd, setError, reset,
+    view, room, countdown, gameData, progress, endResult, error, reset,
   } = useVersusRoomStore();
 
-  // 注册所有 socket 事件（进页一次）
+  // 确保 socket 会话已初始化（房间页可能被直接访问，session 未建）
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-
-    const handlers: Record<string, (data: unknown) => void> = {
-      'room:state': (d) => setRoomState(d as RoomStatePayload),
-      'room:countdown': (d) => setCountdown((d as CountdownPayload).remaining),
-      'game:start': (d) => onGameStart(d as GameStartPayload),
-      'game:progress': (d) => onGameProgress(d as GameProgressPayload),
-      'game:end': (d) => onGameEnd(d as GameEndPayload),
-      'room:error': (d) => setError((d as RoomErrorPayload).message),
-    };
-    for (const [event, handler] of Object.entries(handlers)) {
-      socket.on(event, handler);
-    }
-
-    return () => {
-      for (const event of Object.keys(handlers)) {
-        socket.off(event);
-      }
-    };
-  }, [setRoomState, setCountdown, onGameStart, onGameProgress, onGameEnd, setError]);
+    initVersusSession();
+  }, []);
 
   const myUserId = user?.id ?? '';
   const me = room?.players.find((p) => p.id === myUserId);
@@ -61,7 +38,6 @@ export function VersusRoom() {
   };
 
   const handlePlayAgain = () => {
-    // 服务器 endGame 已把房间回 ready/waiting，回大厅重新进
     reset();
     navigate('/versus');
   };

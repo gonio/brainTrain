@@ -1,52 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
 import { useVersusRoomStore } from '../stores/versusRoomStore';
-import { connectVersus, getSocket } from '../lib/versusSocket';
-import type { PublicRoom } from '../types/versus';
+import { initVersusSession, subscribeLobby, unsubscribeLobby } from '../lib/versusSocketSession';
+import { getSocket } from '../lib/versusSocket';
 
 export function Versus() {
   const navigate = useNavigate();
-  const { ensureAuthenticated } = useAuthStore();
-  const { matchedRoomId } = useVersusRoomStore();
-  const [rooms, setRooms] = useState<PublicRoom[]>([]);
-  const [matchmaking, setMatchmaking] = useState(false);
-  const [connected, setConnected] = useState(false);
+  const { matchedRoomId, lobbyRooms, connected } = useVersusRoomStore();
+  const [matchmaking, setMatchmaking] = useMatchmaking();
 
-  // 建号 + 连 socket + 订阅大厅
+  // 初始化 socket 会话（幂等，只建一次 listener）+ 订阅大厅
   useEffect(() => {
-    let socket: ReturnType<typeof getSocket> = null;
+    let socket: ReturnType<typeof getSocket> | null = null;
     (async () => {
-      await ensureAuthenticated();
-      const t = useAuthStore.getState().token;
-      if (!t) return;
-      socket = connectVersus(t);
-      setConnected(socket.connected);
-
-      socket.on('lobby:list', setRooms);
-      socket.on('lobby:roomAdded', (room: PublicRoom) => setRooms((prev) => [...prev, room]));
-      socket.on('lobby:roomChanged', (room: PublicRoom) => setRooms((prev) => prev.map((r) => r.roomId === room.roomId ? room : r)));
-      socket.on('lobby:roomRemoved', ({ roomId }: { roomId: string }) => setRooms((prev) => prev.filter((r) => r.roomId !== roomId)));
-      socket.on('match:found', (payload) => useVersusRoomStore.getState().onMatchFound(payload));
-      socket.on('connect', () => setConnected(true));
-      socket.on('disconnect', () => setConnected(false));
-
-      socket.emit('lobby:subscribe');
+      socket = await initVersusSession();
+      if (!socket) return;
+      useVersusRoomStore.getState().setConnected(socket.connected);
+      socket.on('connect', () => useVersusRoomStore.getState().setConnected(true));
+      socket.on('disconnect', () => useVersusRoomStore.getState().setConnected(false));
+      subscribeLobby();
     })();
 
     return () => {
-      if (socket) {
-        socket.emit('lobby:unsubscribe');
-        socket.off('lobby:list');
-        socket.off('lobby:roomAdded');
-        socket.off('lobby:roomChanged');
-        socket.off('lobby:roomRemoved');
-        socket.off('match:found');
-      }
+      // 离开大厅页只退订大厅广播，不移除 socket listener（session 持续）
+      unsubscribeLobby();
     };
-  }, [ensureAuthenticated]);
+  }, []);
 
-  // 匹配成功 → 跳房间（matchedRoomId 由 socket 'match:found' handler 经 store 设置）
+  // 匹配成功 → 跳房间
   useEffect(() => {
     if (matchedRoomId) {
       navigate(`/versus/room/${matchedRoomId}`);
@@ -70,7 +51,6 @@ export function Versus() {
   const handleCreateRoom = () => {
     const socket = getSocket();
     if (!socket) return;
-    // 建房后等服务端 room:state 推过来，房间页会接手监听
     socket.once('room:state', (payload: { roomId: string }) => {
       navigate(`/versus/room/${payload.roomId}`);
     });
@@ -118,11 +98,11 @@ export function Versus() {
       {/* 房间列表 */}
       <div>
         <h2 className="font-headline text-lg font-bold mb-3">公开房间</h2>
-        {rooms.length === 0 ? (
+        {lobbyRooms.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">暂无公开房间，创建一个或快速匹配吧</p>
         ) : (
           <div className="space-y-2">
-            {rooms.map((room) => (
+            {lobbyRooms.map((room) => (
               <button
                 key={room.roomId}
                 onClick={() => handleJoinRoom(room.roomId)}
@@ -146,4 +126,10 @@ export function Versus() {
       </div>
     </div>
   );
+}
+
+// 简单的本地匹配状态 hook
+import { useState } from 'react';
+function useMatchmaking(): [boolean, (v: boolean) => void] {
+  return useState(false);
 }

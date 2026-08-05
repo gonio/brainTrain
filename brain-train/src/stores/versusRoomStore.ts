@@ -1,8 +1,9 @@
 // 多人对战房间/游戏状态 store。socket 事件 → action → 状态。
+// lobbyRooms 也存在这里，跨页面共享（解决返回大厅后列表消失问题）。
 import { create } from 'zustand';
 import type {
   RoomStatePayload, GameStartPayload, GameProgressPayload,
-  GameEndPayload, MatchFoundPayload, VersusPlayer, RoomState,
+  GameEndPayload, MatchFoundPayload, VersusPlayer, RoomState, PublicRoom,
 } from '../types/versus';
 
 export type VersusView = 'lobby' | 'ready' | 'countdown' | 'playing' | 'result';
@@ -24,6 +25,9 @@ interface VersusRoomState {
   progress: GameProgressPayload | null;
   endResult: GameEndPayload | null;
   error: string | null;
+  // 大厅公开房间列表（跨页面共享，由 versusSocketSession 维护）
+  lobbyRooms: PublicRoom[];
+  connected: boolean;
 
   setRoomState: (payload: RoomStatePayload) => void;
   setCountdown: (remaining: number) => void;
@@ -33,6 +37,12 @@ interface VersusRoomState {
   onGameEnd: (payload: GameEndPayload) => void;
   setError: (msg: string | null) => void;
   setView: (v: VersusView) => void;
+  setConnected: (c: boolean) => void;
+  // lobby 列表操作
+  setLobbyRooms: (rooms: PublicRoom[]) => void;
+  addLobbyRoom: (room: PublicRoom) => void;
+  updateLobbyRoom: (room: PublicRoom) => void;
+  removeLobbyRoom: (roomId: string) => void;
   reset: () => void;
 }
 
@@ -52,6 +62,8 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
   progress: null,
   endResult: null,
   error: null,
+  lobbyRooms: [],
+  connected: false,
 
   setRoomState: (payload) => set({
     room: {
@@ -76,9 +88,16 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
 
   setError: (msg) => set({ error: msg }),
   setView: (v) => set({ view: v }),
+  setConnected: (c) => set({ connected: c }),
+
+  setLobbyRooms: (rooms) => set({ lobbyRooms: rooms }),
+  addLobbyRoom: (room) => set((s) => ({ lobbyRooms: [...s.lobbyRooms, room] })),
+  updateLobbyRoom: (room) => set((s) => ({ lobbyRooms: s.lobbyRooms.map((r) => r.roomId === room.roomId ? room : r) })),
+  removeLobbyRoom: (roomId) => set((s) => ({ lobbyRooms: s.lobbyRooms.filter((r) => r.roomId !== roomId) })),
 
   reset: () => set({
     view: 'lobby', room: null, matchedRoomId: null, countdown: null,
     gameData: null, progress: null, endResult: null, error: null,
   }),
 }));
+
