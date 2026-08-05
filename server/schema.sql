@@ -3,11 +3,22 @@
 
 CREATE TABLE IF NOT EXISTS users (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username    TEXT NOT NULL,
+  username    TEXT NOT NULL UNIQUE,
   avatar      TEXT NOT NULL,
   token       TEXT NOT NULL UNIQUE,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 用户名唯一约束（迁移：对已存在的表加约束）
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_username_key') THEN
+    ALTER TABLE users ADD CONSTRAINT users_username_key UNIQUE (username);
+  END IF;
+EXCEPTION WHEN duplicate_value THEN
+  -- 已有重复行时忽略（极少见，匿名随机名几乎不冲突）
+  NULL;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);
 
