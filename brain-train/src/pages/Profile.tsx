@@ -175,7 +175,8 @@ export default function Profile() {
 
       {/* 内容区域 */}
       <div className="max-w-2xl mx-auto px-4 -mt-6">
-        {/* 统计卡片 */}
+        {/* 统计卡片（编辑模式下隐藏） */}
+        {!isEditing && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -230,6 +231,7 @@ export default function Profile() {
             </CardContent>
           </Card>
         </motion.div>
+        )}
 
         {/* 编辑资料 */}
         {isEditing && (
