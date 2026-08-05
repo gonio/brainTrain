@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useUserStore } from './stores/userStore';
 import { useSettingsStore } from './stores/settingsStore';
+import { useAuthStore } from './stores/authStore';
 import { AppLayout } from './components/layout';
 import { GameCard } from './components/game';
 import { Stats } from './pages/Stats';
@@ -246,11 +247,17 @@ function Home() {
 function RootLayout() {
   const { loadProfile } = useUserStore();
   const { theme } = useSettingsStore();
+  const { ensureAuthenticated } = useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  // 启动时建号 / 恢复 token（服务端 user 为昵称头像权威来源）
+  useEffect(() => {
+    ensureAuthenticated();
+  }, [ensureAuthenticated]);
 
   // 应用主题
   useEffect(() => {

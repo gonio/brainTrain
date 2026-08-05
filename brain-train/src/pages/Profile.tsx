@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useUserStore } from '../stores/userStore';
+import { useAuthStore } from '../stores/authStore';
 import { AvatarPicker } from '../components/AvatarPicker';
 import { AvatarUploader } from '../components/AvatarUploader';
 import { Button } from '../components/ui/button';
@@ -66,6 +67,18 @@ export default function Profile() {
 
     setIsSaving(true);
     try {
+      // 先同步到服务端（服务端为权威来源），失败则不写本地
+      // 409 用户名冲突等错误提示用户后中止
+      try {
+        await useAuthStore.getState().updateProfile({
+          username: displayName.trim(),
+          avatar,
+        });
+      } catch (e) {
+        alert((e as Error).message);
+        return;
+      }
+
       await updateProfile({
         displayName: displayName.trim(),
         avatar,
