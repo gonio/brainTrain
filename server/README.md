@@ -141,6 +141,10 @@ location /socket.io/ {
     proxy_set_header Connection "upgrade";
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    # 关键：WebSocket 长连接保活，否则 Nginx 默认 60s 超时会掐断
+    # 导致房间内玩家"过一会儿"突然断线、状态重置
+    proxy_read_timeout 86400s;
+    send_timeout 86400s;
 }
 ```
 
