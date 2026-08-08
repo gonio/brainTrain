@@ -65,7 +65,7 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
   lobbyRooms: [],
   connected: false,
 
-  setRoomState: (payload) => set({
+  setRoomState: (payload) => set((s) => ({
     room: {
       roomId: payload.roomId,
       name: payload.name,
@@ -73,8 +73,9 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
       players: payload.players,
       gameMode: payload.gameMode,
     },
-    view: stateToView(payload.state),
-  }),
+    // 结果页期间不覆盖 view（避免 endGame 后的 room:state 把结果页打回 ready 导致循环）
+    view: s.view === 'result' ? s.view : stateToView(payload.state),
+  })),
 
   setCountdown: (remaining) => set({ countdown: remaining, view: 'countdown' }),
 

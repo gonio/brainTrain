@@ -91,6 +91,21 @@ export function VersusRoom() {
 
       {room && <RoomHUD roomId={room.roomId} players={room.players} myUserId={myUserId} />}
 
+      {/* 玩法规则 */}
+      <div className="bg-accent/50 rounded-2xl p-4 space-y-2">
+        <h3 className="font-headline font-bold text-base flex items-center gap-2">
+          <span className="material-symbols-outlined text-xl">info</span>
+          舒尔特对战 · 玩法说明
+        </h3>
+        <ul className="text-sm text-muted-foreground space-y-1 leading-relaxed">
+          <li>• 5×5 舒尔特表，数字 1~25 随机排列</li>
+          <li>• <strong>从 1 到 25 按顺序点击</strong>（正序）</li>
+          <li>• 先点完所有数字的一方获胜</li>
+          <li>• 点错会降低正确率，正确率相同时比拼速度</li>
+          <li>• 限时 90 秒，未点完按当前进度结算</li>
+        </ul>
+      </div>
+
       <div className="text-center py-4">
         <p className="text-muted-foreground">
           {isFull ? (allReady ? '房主可以开始游戏了' : '等待所有玩家准备…') : '等待对手加入…'}
