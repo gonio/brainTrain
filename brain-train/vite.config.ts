@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { VitePWA } from 'vite-plugin-pwa'
+// PWA SW 已禁用：precache 导致每次部署用户拿不到新代码（多人对战需实时更新）
 import { resolve } from 'path'
 
 // https://vite.dev/config/
@@ -9,79 +9,8 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      manifest: {
-        name: 'BrainTrain - 专注力训练',
-        short_name: 'BrainTrain',
-        description: '科学有效的专注力训练应用，包含7种认知训练模式',
-        theme_color: '#4f46e5',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: '/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: '/icon-maskable-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
-          }
-        ]
-      },
-      workbox: {
-        // 新 SW 立即激活，不等待旧标签页关闭
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // 离线深链路回退到 precache 的 index.html
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            // 入口页面：NetworkFirst 优先网络，确保部署后立即更新
-            urlPattern: ({ sameOrigin, url }: { sameOrigin: boolean; url: URL }) =>
-              sameOrigin && (url.pathname === '/' || url.pathname === '/index.html'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-cache',
-              expiration: {
-                maxEntries: 5,
-                maxAgeSeconds: 60 * 60 * 24 // 1 天
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 年
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
-      }
-    })
+    // PWA SW 已禁用：precache 导致每次部署用户拿不到新代码（多人对战需实时更新）
+    // VitePWA({ ... })
   ],
   resolve: {
     alias: {

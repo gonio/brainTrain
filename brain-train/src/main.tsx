@@ -11,14 +11,6 @@ import '@fontsource-variable/material-symbols-outlined'
 import './styles/globals.css'
 import { router } from './App.tsx'
 
-// PWA service worker 注册：检测到新版本立即刷新（确保用户始终用最新代码）
-import { registerSW } from 'virtual:pwa-register'
-registerSW({
-  onNeedRefresh() {
-    window.location.reload()
-  },
-})
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RouterProvider router={router} />
