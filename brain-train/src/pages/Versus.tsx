@@ -1,13 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVersusRoomStore } from '../stores/versusRoomStore';
 import { initVersusSession, subscribeLobby, unsubscribeLobby } from '../lib/versusSocketSession';
 import { getSocket } from '../lib/versusSocket';
+import { CreateRoomModal } from '@/components/versus';
+import type { RoundMode, GameMode } from '@/types/versus';
 
 export function Versus() {
   const navigate = useNavigate();
   const { matchedRoomId, lobbyRooms, connected } = useVersusRoomStore();
   const [matchmaking, setMatchmaking] = useMatchmaking();
+  const [showCreate, setShowCreate] = useState(false);
 
   // 初始化 socket 会话（幂等，只建一次 listener）+ 订阅大厅
   useEffect(() => {
@@ -48,13 +51,14 @@ export function Versus() {
     setMatchmaking(false);
   };
 
-  const handleCreateRoom = () => {
+  const handleCreateConfirm = (roundMode: RoundMode, games: GameMode[]) => {
     const socket = getSocket();
     if (!socket) return;
     socket.once('room:state', (payload: { roomId: string }) => {
       navigate(`/versus/room/${payload.roomId}`);
     });
-    socket.emit('room:create', {});
+    socket.emit('room:create', { roundMode, games });
+    setShowCreate(false);
   };
 
   const handleJoinRoom = (roomId: string) => {
@@ -88,7 +92,7 @@ export function Versus() {
 
       {/* 创建房间 */}
       <button
-        onClick={handleCreateRoom}
+        onClick={() => setShowCreate(true)}
         disabled={!connected}
         className="w-full py-4 bg-primary text-primary-foreground font-bold text-lg rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
       >
@@ -124,12 +128,13 @@ export function Versus() {
           </div>
         )}
       </div>
+
+      {showCreate && <CreateRoomModal onConfirm={handleCreateConfirm} onCancel={() => setShowCreate(false)} />}
     </div>
   );
 }
 
 // 简单的本地匹配状态 hook
-import { useState } from 'react';
 function useMatchmaking(): [boolean, (v: boolean) => void] {
   return useState(false);
 }
