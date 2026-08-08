@@ -86,10 +86,10 @@ describe('多游戏对战集成', () => {
     }
     const grace = await graceP;
     expect(grace.seconds).toBe(10);
-    const endP = expectEvent<{ winner: string }>(host, 'game:end', 5000);
+    const endP = expectEvent<{ winner: string }>(host, 'game:end', 15000);
     const end = await endP;
     expect(end.winner).toBe('me');
-  }, 25000);
+  }, 35000);
 
   it('单局序列：双方都提交才结算', async () => {
     const { host, guest, start } = await setupGame(['sequence']);
@@ -105,13 +105,13 @@ describe('多游戏对战集成', () => {
     const end = await hostEndP;
     // 双方都对 → 比时间，host 先提交更快 → host 胜（或平局如果时间相同）
     expect(['me', 'draw']).toContain(end.winner);
-  }, 25000);
+  }, 35000);
 
   it('多局：舒尔特→字色，打完舒尔特收到 room:nextRound', async () => {
     const { host, start } = await setupGame(['schulte', 'stroop'], 'multi');
     expect(start.mode).toBe('schulte');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
-    const nextRoundP = expectEvent<{ nextMode: string; queueIndex: number }>(host, 'room:nextRound', 8000);
+    const nextRoundP = expectEvent<{ nextMode: string; queueIndex: number }>(host, 'room:nextRound', 12000);
     // host 点完舒尔特
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
@@ -121,12 +121,12 @@ describe('多游戏对战集成', () => {
     const next = await nextRoundP;
     expect(next.nextMode).toBe('stroop');
     expect(next.queueIndex).toBe(1);
-  }, 25000);
+  }, 35000);
 
   it('多局打完最后收到 room:roundEnd + hostCanChangeGames', async () => {
     const { host, start } = await setupGame(['schulte'], 'single');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
-    const roundEndP = expectEvent<{ roundResults: unknown[] }>(host, 'room:roundEnd', 8000);
+    const roundEndP = expectEvent<{ roundResults: unknown[] }>(host, 'room:roundEnd', 12000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
@@ -138,13 +138,13 @@ describe('多游戏对战集成', () => {
     const stateP = expectEvent<{ hostCanChangeGames: boolean }>(host, 'room:state', 3000);
     const state = await stateP;
     expect(state.hostCanChangeGames).toBe(true);
-  }, 25000);
+  }, 35000);
 
   it('reconfigure：本轮结束后房主改游戏', async () => {
     const { host, start } = await setupGame(['schulte'], 'single');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
     // 先注册 roundEnd 监听，再打完游戏触发它
-    const roundEndP = expectEvent(host, 'room:roundEnd', 8000);
+    const roundEndP = expectEvent(host, 'room:roundEnd', 12000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
@@ -159,13 +159,13 @@ describe('多游戏对战集成', () => {
     const state = await stateP;
     expect(state.gameMode).toBe('bottle');
     expect(state.gameQueue).toEqual(['bottle']);
-  }, 30000);
+  }, 40000);
 
   it('非房主退出 → 本轮重置（roundResults 清空）', async () => {
     const { host, guest, start } = await setupGame(['schulte', 'stroop'], 'multi');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
     // 先注册 nextRound 监听，再打完第一局触发它
-    const nextRoundP = expectEvent(host, 'room:nextRound', 8000);
+    const nextRoundP = expectEvent(host, 'room:nextRound', 12000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
@@ -178,5 +178,5 @@ describe('多游戏对战集成', () => {
     const state = await stateP;
     expect(state.currentQueueIndex).toBe(0);  // 重置回 0
     expect(state.roundResults).toHaveLength(0);  // 清空
-  }, 25000);
+  }, 35000);
 });

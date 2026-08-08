@@ -376,21 +376,25 @@ export function attachRoomHandlers(io: SocketIOServer): void {
 
     let aFinal: FinalizedProgress;
     let bFinal: FinalizedProgress;
+    let aWon: boolean;
+    let bWon: boolean;
     if (reason === 'disconnect' && loserId) {
+      // 断线判负：直接裁定存活方胜，不走 determineWinner（双方可能都 0 分）
       const loserIsA = loserId === aId;
       aFinal = engine.finalize(game.players.get(aId)!, game.seed, game.startTime, Date.now());
       bFinal = engine.finalize(game.players.get(bId)!, game.seed, game.startTime, Date.now());
       if (loserIsA) aFinal = { ...aFinal, accuracy: 0 };
       else bFinal = { ...bFinal, accuracy: 0 };
+      aWon = !loserIsA;
+      bWon = loserIsA;
     } else {
       const endTime = Date.now();
       aFinal = engine.finalize(game.players.get(aId)!, game.seed, game.startTime, endTime);
       bFinal = engine.finalize(game.players.get(bId)!, game.seed, game.startTime, endTime);
+      const winnerFromA = determineWinner(aFinal, bFinal);
+      aWon = winnerFromA === 'me';
+      bWon = winnerFromA === 'opponent';
     }
-
-    const winnerFromA = determineWinner(aFinal, bFinal);
-    const aWon = winnerFromA === 'me';
-    const bWon = winnerFromA === 'opponent';
 
     // 各游戏从 detail 提取 found/errors，避免硬编码 0 把累计战绩归零
     const aFE = extractFoundErrors(aFinal.detail, game.mode);
