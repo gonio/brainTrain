@@ -181,7 +181,7 @@ export interface Room {
   roundMode: RoundMode;            // 单局 / 多局
   gameQueue: GameMode[];           // 本轮游戏队列（single=[X]，multi=[A,B,...]）
   currentQueueIndex: number;       // 当前打到第几局（0-based）
-  roundResults: RoundGameResult[]; // 本轮已结算的各局结果（房间内展示用；战绩另由 recordMatch 每局落库）
+  roundResults: RoundGameResult[]; // 本轮已结算的各局结果（房间内进行中状态；对手退出即清空）
   hostCanChangeGames: boolean;     // 本轮是否已结束（true 时房主可改游戏类型）
 }
 
@@ -191,7 +191,8 @@ export interface RoundGameResult {
   // 中立结果（不偏向任一方），存双方 id + 胜负 + 关键指标
   results: { playerId: string; won: boolean; accuracy: number; timeMs: number }[];
 }
-// 注：roundResults 只是房间内本轮进度展示，退出不丢；持久化的权威战绩在 Postgres matches 表。
+// 注：roundResults 是「A vs B 这一轮」的房间内进度，对手一走就清空。
+// 永久战绩在 Postgres matches 表（endGame 每局落库），不受退出影响。
 ```
 
 ### 4.2 建房输入扩展
@@ -332,10 +333,13 @@ export interface RoomCreateInput {
 
 ### 7.1 局间退出（ready / finished 视图）
 
-**核心原则**：每完成一局即立刻写入战绩（`recordMatch` 在 `endGame` 里每局都调用），所以无论谁退出，已完成的局战绩都在数据库里不受影响。多局对战本质是「连续打多场独立对局」的便利，不强制打完本轮才算。
+**两个层面要分清**：
 
-- **非房主退出**（`room:leave`）：从房间移除，房间回 `waiting`，房主留下等人。**本轮队列 `gameQueue` 和已完成的 `roundResults` 全部保留**——打过的局仍然有效，是房主的战绩记录。新人加入、双方准备后，从 `currentQueueIndex` 继续打剩下的局。若本轮已全部打完（`hostCanChangeGames === true`），则保持该状态，房主可直接重新选择游戏类型。
-- **房主退出**：广播 `room:closed`，全员被踢回大厅，房间销毁。
+1. **个人战绩（Postgres `matches` 表）——永久保留**：每完成一局 `endGame` 就调用 `recordMatch` 落库，是双方各自的个人战绩，退出绝不让它失效。多局对战只是「连续打多场独立对局」的便利，每打完一局就等于打完了一场，战绩已入库。
+2. **房间内本轮队列（内存态 `roundResults`/`currentQueueIndex`）——本轮终止即清空**：这是「房主 A 与对手 B 的这一系列对战」的进行中状态。一旦 B 退出，A 与 B 的本轮对战就此结束（不是暂停），房间内本轮状态全部重置。
+
+- **非房主退出**（`room:leave`）：该玩家移除，房间回 `waiting`，房主留下等人。**本轮状态全部重置**——`gameQueue` 配置保留，但 `currentQueueIndex` 回 0、`roundResults` 清空、`hostCanChangeGames = false`。新人加入、双方准备后，从第一局重新开始打（这是房主 A 与新对手 C 的全新一轮对战）。已落库的 A vs B 各局战绩不受影响。
+- **房主退出**：广播 `room:closed`，全员被踢回大厅，房间销毁。已落库战绩同样不受影响。
 
 ### 7.2 游戏中退出 / 断线
 
