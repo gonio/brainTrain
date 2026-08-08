@@ -36,6 +36,10 @@ export function buildApp(): AppBundle {
   const httpServer = createServer(app);
   const io = new SocketIOServer(httpServer, {
     cors: { origin: config.corsOrigin },
+    // 心跳保活：10s 发 ping，超时 30s 认定断线。
+    // 默认 pingInterval=25s 在某些网络环境下太长，导致 transport close。
+    pingInterval: 10000,
+    pingTimeout: 30000,
   });
   attachAuthMiddleware(io);
   attachRoomHandlers(io);
