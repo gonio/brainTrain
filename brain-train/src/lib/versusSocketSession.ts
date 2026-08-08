@@ -46,9 +46,20 @@ export async function initVersusSession(): Promise<Socket | null> {
   return socket;
 }
 
-// 大厅订阅（进入大厅页时调用）
+// 大厅订阅（进入大厅页时调用）。确保 socket 已连接后再 emit。
 export function subscribeLobby(): void {
-  getSocket()?.emit('lobby:subscribe');
+  const socket = getSocket();
+  if (!socket) return;
+  if (socket.connected) {
+    socket.emit('lobby:subscribe');
+  } else {
+    // 还没连上，等连接成功后再订阅（只订阅一次）
+    const handler = () => {
+      socket.emit('lobby:subscribe');
+      socket.off('connect', handler);
+    };
+    socket.on('connect', handler);
+  }
 }
 
 // 大厅退订（离开大厅页时调用）
