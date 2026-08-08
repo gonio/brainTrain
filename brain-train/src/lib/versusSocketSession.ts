@@ -6,8 +6,10 @@ import { connectVersus, getSocket } from './versusSocket';
 import { useAuthStore } from '../stores/authStore';
 import { useVersusRoomStore } from '../stores/versusRoomStore';
 import type {
-  PublicRoom, RoomStatePayload, CountdownPayload, GameStartPayload,
-  GameProgressPayload, GameEndPayload, RoomErrorPayload, MatchFoundPayload,
+  PublicRoom, RoomStatePayload, CountdownPayload,
+  GameEndPayload, RoomErrorPayload, MatchFoundPayload,
+  VersusGameStart, VersusGameProgress,
+  NextRoundPayload, RoundEndPayload, GracePayload,
 } from '../types/versus';
 
 let initialized = false;
@@ -45,9 +47,12 @@ export async function initVersusSession(): Promise<Socket | null> {
   // ===== 房间/游戏事件（写进 store）=====
   socket.on('room:state', (d: RoomStatePayload) => store().setRoomState(d));
   socket.on('room:countdown', (d: CountdownPayload) => store().setCountdown(d.remaining));
-  socket.on('game:start', (d: GameStartPayload) => store().onGameStart(d));
-  socket.on('game:progress', (d: GameProgressPayload) => store().onGameProgress(d));
+  socket.on('game:start', (d: VersusGameStart) => store().onGameStart(d));
+  socket.on('game:progress', (d: VersusGameProgress) => store().onGameProgress(d));
   socket.on('game:end', (d: GameEndPayload) => store().onGameEnd(d));
+  socket.on('game:grace', (d: GracePayload) => store().setGrace(d.seconds));
+  socket.on('room:nextRound', (d: NextRoundPayload) => store().onNextRound(d));
+  socket.on('room:roundEnd', (d: RoundEndPayload) => store().onRoundEnd(d));
   socket.on('room:error', (d: RoomErrorPayload) => store().setError(d.message));
 
   return socket;

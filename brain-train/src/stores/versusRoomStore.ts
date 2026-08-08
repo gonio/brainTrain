@@ -2,11 +2,12 @@
 // lobbyRooms 也存在这里，跨页面共享（解决返回大厅后列表消失问题）。
 import { create } from 'zustand';
 import type {
-  RoomStatePayload, GameStartPayload, GameProgressPayload,
-  GameEndPayload, MatchFoundPayload, VersusPlayer, RoomState, PublicRoom,
+  RoomStatePayload, GameEndPayload, MatchFoundPayload, VersusPlayer, RoomState, PublicRoom,
+  VersusGameStart, VersusGameProgress, RoundInfo, RoundGameResult,
+  NextRoundPayload, RoundEndPayload,
 } from '../types/versus';
 
-export type VersusView = 'lobby' | 'ready' | 'countdown' | 'playing' | 'result';
+export type VersusView = 'lobby' | 'ready' | 'countdown' | 'playing' | 'result' | 'roundResult';
 
 interface RoomSnapshot {
   roomId: string;
@@ -21,9 +22,13 @@ interface VersusRoomState {
   room: RoomSnapshot | null;
   matchedRoomId: string | null;
   countdown: number | null;
-  gameData: GameStartPayload | null;
-  progress: GameProgressPayload | null;
+  gameData: VersusGameStart | null;
+  progress: VersusGameProgress | null;
   endResult: GameEndPayload | null;
+  // 多游戏轮次信息
+  roundInfo: RoundInfo | null;
+  roundResults: RoundGameResult[];
+  graceSeconds: number | null;
   error: string | null;
   // 大厅公开房间列表（跨页面共享，由 versusSocketSession 维护）
   lobbyRooms: PublicRoom[];
@@ -32,9 +37,13 @@ interface VersusRoomState {
   setRoomState: (payload: RoomStatePayload) => void;
   setCountdown: (remaining: number) => void;
   onMatchFound: (payload: MatchFoundPayload) => void;
-  onGameStart: (payload: GameStartPayload) => void;
-  onGameProgress: (payload: GameProgressPayload) => void;
+  onGameStart: (payload: VersusGameStart) => void;
+  onGameProgress: (payload: VersusGameProgress) => void;
   onGameEnd: (payload: GameEndPayload) => void;
+  setRoundInfo: (info: RoundInfo) => void;
+  onNextRound: (payload: NextRoundPayload) => void;
+  onRoundEnd: (payload: RoundEndPayload) => void;
+  setGrace: (seconds: number | null) => void;
   setError: (msg: string | null) => void;
   setView: (v: VersusView) => void;
   setConnected: (c: boolean) => void;
@@ -61,6 +70,9 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
   gameData: null,
   progress: null,
   endResult: null,
+  roundInfo: null,
+  roundResults: [],
+  graceSeconds: null,
   error: null,
   lobbyRooms: [],
   connected: false,
@@ -73,19 +85,46 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
       players: payload.players,
       gameMode: payload.gameMode,
     },
+    roundInfo: {
+      roundMode: payload.roundMode,
+      gameQueue: payload.gameQueue,
+      currentQueueIndex: payload.currentQueueIndex,
+      totalInRound: payload.totalInRound,
+      hostCanChangeGames: payload.hostCanChangeGames,
+    },
     // 结果页期间不覆盖 view（避免 endGame 后的 room:state 把结果页打回 ready 导致循环）
-    view: s.view === 'result' ? s.view : stateToView(payload.state),
+    // roundResult 同理保护
+    view: s.view === 'result' || s.view === 'roundResult' ? s.view : stateToView(payload.state),
   })),
 
   setCountdown: (remaining) => set({ countdown: remaining, view: 'countdown' }),
 
   onMatchFound: (payload) => set({ matchedRoomId: payload.roomId }),
 
-  onGameStart: (payload) => set({ gameData: payload, view: 'playing', progress: null }),
+  onGameStart: (payload) => set({ gameData: payload, view: 'playing', progress: null, graceSeconds: null }),
 
   onGameProgress: (payload) => set({ progress: payload }),
 
   onGameEnd: (payload) => set({ endResult: payload, view: 'result' }),
+
+  setRoundInfo: (info) => set({ roundInfo: info }),
+
+  onNextRound: (payload) => set((s) => ({
+    roundInfo: s.roundInfo ? { ...s.roundInfo, currentQueueIndex: payload.queueIndex, hostCanChangeGames: false } : s.roundInfo,
+    roundResults: payload.roundResults,
+    gameData: null,
+    progress: null,
+    graceSeconds: null,
+    endResult: null,
+    view: 'ready',
+  })),
+
+  onRoundEnd: (payload) => set({
+    roundResults: payload.roundResults,
+    view: 'roundResult',
+  }),
+
+  setGrace: (seconds) => set({ graceSeconds: seconds }),
 
   setError: (msg) => set({ error: msg }),
   setView: (v) => set({ view: v }),
@@ -98,7 +137,9 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
 
   reset: () => set({
     view: 'lobby', room: null, matchedRoomId: null, countdown: null,
-    gameData: null, progress: null, endResult: null, error: null,
+    gameData: null, progress: null, endResult: null,
+    roundInfo: null, roundResults: [], graceSeconds: null,
+    error: null,
   }),
 }));
 
