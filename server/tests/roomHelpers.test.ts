@@ -100,6 +100,7 @@ describe('roomHelpers', () => {
         currentQueueIndex: 0,
         totalInRound: 1,
         hostCanChangeGames: false,
+        roundResults: [],
       });
     });
   });
