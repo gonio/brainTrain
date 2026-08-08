@@ -41,11 +41,12 @@ function expectEvent<T>(sock: ClientSocket, event: string, timeoutMs = 3000): Pr
   });
 }
 
-// 按顺序正确点完所有格子（1,2,3...找对应 cellIndex）
-async function playPerfect(sock: ClientSocket, grid: number[]): Promise<void> {
-  for (let target = 1; target <= grid.length; target++) {
-    const cellIndex = grid.indexOf(target);
-    sock.emit('game:tap', { cellIndex });
+// 按顺序正确点完所有格子：从 seed.order 读要点顺序，在 seed.grid 里找对应 cellIndex
+async function playPerfect(sock: ClientSocket, seed: { grid: number[]; order: number[] }): Promise<void> {
+  for (let i = 0; i < seed.order.length; i++) {
+    const target = seed.order[i];
+    const cellIndex = seed.grid.indexOf(target);
+    sock.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
     await new Promise((r) => setTimeout(r, 10));
   }
 }
@@ -77,39 +78,39 @@ describe('舒尔特对战集成', () => {
   async function setupGame(): Promise<{
     host: ClientSocket;
     guest: ClientSocket;
-    hostStart: { grid: number[]; target: number };
-    guestStart: { grid: number[]; target: number };
+    hostSeed: { grid: number[]; order: number[]; target: number };
+    guestSeed: { grid: number[]; order: number[] };
   }> {
     const host = await client();
     const guest = await client();
-    host.emit('room:create', {});
+    host.emit('room:create', { roundMode: 'single', games: ['schulte'] });
     const st = await expectEvent<{ roomId: string }>(host, 'room:state');
     guest.emit('room:join', { roomId: st.roomId });
     await expectEvent(host, 'room:state'); // ready
 
     // countdown 跑 3 秒（3→2→1→0）才发 game:start，给 6 秒余量避免边界竞态
-    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start', 6000);
-    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start', 6000);
+    const hostStartP = expectEvent<{ mode: string; seed: { grid: number[]; order: number[]; target: number }; timeLimitMs: number }>(host, 'game:start', 6000);
+    const guestStartP = expectEvent<{ mode: string; seed: { grid: number[]; order: number[] } }>(guest, 'game:start', 6000);
     host.emit('room:start');
     const hostStart = await hostStartP;
     const guestStart = await guestStartP;
-    return { host, guest, hostStart, guestStart };
+    return { host, guest, hostSeed: hostStart.seed, guestSeed: guestStart.seed };
   }
 
   it('countdown 结束后双方收到同一张 game:start', async () => {
     await setup();
-    const { hostStart, guestStart } = await setupGame();
-    expect(hostStart.grid).toEqual(guestStart.grid);
-    expect(hostStart.target).toBe(25);
-    expect(hostStart.grid).toHaveLength(25);
+    const { hostSeed, guestSeed } = await setupGame();
+    expect(hostSeed.grid).toEqual(guestSeed.grid);
+    expect(hostSeed.target).toBe(25);
+    expect(hostSeed.grid).toHaveLength(25);
   }, 15000);
 
   it('host 点完所有格子 → game:end，host 胜（guest 没动）', async () => {
     await setup();
-    const { host, hostStart } = await setupGame();
+    const { host, hostSeed } = await setupGame();
 
     const hostEndP = expectEvent<{ winner: string; myResult: { won: boolean; accuracy: number } }>(host, 'game:end', 5000);
-    await playPerfect(host, hostStart.grid);
+    await playPerfect(host, hostSeed);
     const end = await hostEndP;
     expect(end.winner).toBe('me');
     expect(end.myResult.won).toBe(true);
@@ -129,14 +130,15 @@ describe('舒尔特对战集成', () => {
 
   it('进度广播：游戏中有 game:progress 事件', async () => {
     await setup();
-    const { host, hostStart } = await setupGame();
+    const { host, hostSeed } = await setupGame();
 
-    const progP = expectEvent<{ me: { found: number }; opponent: { found: number } }>(host, 'game:progress', 2000);
-    for (let target = 1; target <= 3; target++) {
-      host.emit('game:tap', { cellIndex: hostStart.grid.indexOf(target) });
+    const progP = expectEvent<{ me: { percent: number }; opponent: { percent: number } }>(host, 'game:progress', 2000);
+    for (let i = 0; i < 3; i++) {
+      const target = hostSeed.order[i];
+      host.emit('game:action', { mode: 'schulte', payload: { cellIndex: hostSeed.grid.indexOf(target) } });
       await new Promise((r) => setTimeout(r, 20));
     }
     const prog = await progP;
-    expect(prog.me.found).toBeGreaterThanOrEqual(0);
+    expect(prog.me.percent).toBeGreaterThanOrEqual(0);
   }, 15000);
 });

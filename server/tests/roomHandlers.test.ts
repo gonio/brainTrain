@@ -157,12 +157,13 @@ describe('房间系统集成', () => {
     await guestCdP;
 
     // countdown 结束（3s）→ 进 playing，双方收 game:start（给 6s 余量）
-    const hostStartP = expectEvent<{ grid: number[]; target: number }>(host, 'game:start', 6000);
-    const guestStartP = expectEvent<{ grid: number[]; target: number }>(guest, 'game:start', 6000);
+    const hostStartP = expectEvent<{ mode: string; seed: { grid: number[]; target: number }; timeLimitMs: number }>(host, 'game:start', 6000);
+    const guestStartP = expectEvent<{ mode: string; seed: { grid: number[]; target: number } }>(guest, 'game:start', 6000);
     const hostStart = await hostStartP;
     const guestStart = await guestStartP;
-    expect(hostStart.target).toBe(25);
-    expect(hostStart.grid).toEqual(guestStart.grid); // 同一张表
+    expect(hostStart.mode).toBe('schulte');
+    expect(hostStart.seed.target).toBe(25);
+    expect(hostStart.seed.grid).toEqual(guestStart.seed.grid); // 同一张表
   }, 15000);
 
   it('非房主点开始被拒', async () => {
