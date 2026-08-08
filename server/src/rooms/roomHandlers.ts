@@ -324,8 +324,10 @@ export function attachRoomHandlers(io: SocketIOServer): void {
       bResult = buildResultForDisconnect(game, bId, loserIsA);
     } else {
       // 正常结算或超时：按正确率/时间裁定
-      const aFinal = finalizeProgress(game.players.get(aId)!, game.target, game.timeLimitMs, game.startTime);
-      const bFinal = finalizeProgress(game.players.get(bId)!, game.target, game.timeLimitMs, game.startTime);
+      // endTime = 对局结束时刻，没点完的玩家时间用这个（而非固定 90s）
+      const endTime = Date.now();
+      const aFinal = finalizeProgress(game.players.get(aId)!, game.target, game.timeLimitMs, game.startTime, endTime);
+      const bFinal = finalizeProgress(game.players.get(bId)!, game.target, game.timeLimitMs, game.startTime, endTime);
       const winnerFromA = determineWinner(aFinal, bFinal); // 'me'|'opponent'|'draw'（a 视角）
       const aWon = winnerFromA === 'me';
       const bWon = winnerFromA === 'opponent';

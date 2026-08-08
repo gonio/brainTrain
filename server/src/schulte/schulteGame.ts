@@ -58,17 +58,21 @@ export interface FinalizedProgress {
 }
 
 // 结算单玩家进度：没点完补齐 errors，算用时和正确率。
+// endTime 是对局实际结束时刻（胜方点完或超时的时刻），
+// 没点完的玩家时间用 endTime - startTime（而非固定时间上限）。
 export function finalizeProgress(
   progress: PlayerProgress,
   target: number,
   timeLimitMs: number,
   startTime: number,
+  endTime?: number,
 ): FinalizedProgress {
   const unfilled = progress.done ? 0 : (target - progress.found);
   const finalErrors = progress.errors + unfilled;
+  // 点完的用 finishTime；没点完的用 endTime（对局结束时刻），兜底 timeLimitMs
   const timeMs = progress.done && progress.finishTime !== null
     ? progress.finishTime - startTime
-    : timeLimitMs;
+    : endTime !== undefined ? endTime - startTime : timeLimitMs;
   return {
     found: progress.found,
     errors: finalErrors,

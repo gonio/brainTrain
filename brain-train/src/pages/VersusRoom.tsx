@@ -42,10 +42,10 @@ export function VersusRoom() {
   };
 
   const handlePlayAgain = () => {
-    // 再来一局：离开当前房间，回大厅
-    getSocket()?.emit('room:leave');
-    reset();
-    navigate('/versus');
+    // 再来一局：留在房间，只重置游戏状态，等房主再开始
+    // 不发 room:leave，不跳路由
+    useVersusRoomStore.getState().setView('ready');
+    useVersusRoomStore.setState({ endResult: null, gameData: null, progress: null, countdown: null });
   };
 
   const handleExit = () => {
