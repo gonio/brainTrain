@@ -126,7 +126,9 @@ describe('多游戏对战集成', () => {
   it('多局打完最后收到 room:roundEnd + hostCanChangeGames', async () => {
     const { host, start } = await setupGame(['schulte'], 'single');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
+    // 先注册 roundEnd 和 room:state 监听（两者在同一 setTimeout 里同时触发）
     const roundEndP = expectEvent<{ roundResults: unknown[] }>(host, 'room:roundEnd', 12000);
+    const stateP = expectEvent<{ hostCanChangeGames: boolean }>(host, 'room:state', 12000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
@@ -134,8 +136,6 @@ describe('多游戏对战集成', () => {
     }
     const re = await roundEndP;
     expect(re.roundResults).toHaveLength(1);
-    // 收到 room:state 带 hostCanChangeGames=true
-    const stateP = expectEvent<{ hostCanChangeGames: boolean }>(host, 'room:state', 3000);
     const state = await stateP;
     expect(state.hostCanChangeGames).toBe(true);
   }, 35000);
@@ -143,16 +143,17 @@ describe('多游戏对战集成', () => {
   it('reconfigure：本轮结束后房主改游戏', async () => {
     const { host, start } = await setupGame(['schulte'], 'single');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
-    // 先注册 roundEnd 监听，再打完游戏触发它
+    // 先注册 roundEnd 和 room:state（两者在同一 setTimeout 里同时触发）
     const roundEndP = expectEvent(host, 'room:roundEnd', 12000);
+    const hostChangeP = expectEvent<{ hostCanChangeGames: boolean }>(host, 'room:state', 12000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
       await new Promise((r) => setTimeout(r, 10));
     }
     await roundEndP;
-    // 等 hostCanChangeGames
-    await expectEvent<{ hostCanChangeGames: boolean }>(host, 'room:state', 3000);
+    const hostChangeState = await hostChangeP;
+    expect(hostChangeState.hostCanChangeGames).toBe(true);
     // reconfigure
     const stateP = expectEvent<{ gameMode: string; gameQueue: string[] }>(host, 'room:state', 3000);
     host.emit('room:reconfigure', { roundMode: 'single', games: ['bottle'] });
