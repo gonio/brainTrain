@@ -73,9 +73,8 @@ export interface RoomStatePayload {
   currentQueueIndex: number;
   totalInRound: number;
   hostCanChangeGames: boolean;
+  roundResults: RoundGameResult[];
 }
-
-// S→C: match:found
 export interface MatchFoundPayload {
   roomId: string;
   opponent: { id: string; name: string; avatar: string };

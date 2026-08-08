@@ -20,6 +20,7 @@ const baseRoomState = {
   currentQueueIndex: 0,
   totalInRound: 1,
   hostCanChangeGames: false,
+  roundResults: [],
 };
 
 describe('versusRoomStore', () => {

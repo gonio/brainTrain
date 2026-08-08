@@ -46,5 +46,6 @@ export function toRoomStatePayload(room: Room): RoomStatePayload {
     currentQueueIndex: room.currentQueueIndex,
     totalInRound: room.gameQueue.length,
     hostCanChangeGames: room.hostCanChangeGames,
+    roundResults: room.roundResults,
   };
 }

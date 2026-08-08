@@ -77,6 +77,7 @@ export interface RoomStatePayload {
   currentQueueIndex: number;
   totalInRound: number;
   hostCanChangeGames: boolean;
+  roundResults: RoundGameResult[];
 }
 
 // S→C: match:found

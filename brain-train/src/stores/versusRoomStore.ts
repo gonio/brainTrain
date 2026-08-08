@@ -92,6 +92,7 @@ export const useVersusRoomStore = create<VersusRoomState>((set) => ({
       totalInRound: payload.totalInRound,
       hostCanChangeGames: payload.hostCanChangeGames,
     },
+    roundResults: payload.roundResults ?? [],
     // 结果页期间不覆盖 view（避免 endGame 后的 room:state 把结果页打回 ready 导致循环）
     // roundResult 同理保护
     view: s.view === 'result' || s.view === 'roundResult' ? s.view : stateToView(payload.state),
