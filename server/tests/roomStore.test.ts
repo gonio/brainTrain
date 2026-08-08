@@ -15,7 +15,7 @@ describe('roomStore', () => {
   });
 
   it('create 建房并返回 room', () => {
-    const room = store.create('h1', player('h1', true));
+    const room = store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     expect(room.roomId).toBeTruthy();
     expect(room.hostId).toBe('h1');
     expect(room.state).toBe('waiting');
@@ -24,7 +24,7 @@ describe('roomStore', () => {
   });
 
   it('get 按 roomId 查', () => {
-    const created = store.create('h1', player('h1', true));
+    const created = store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     expect(store.get(created.roomId)?.roomId).toBe(created.roomId);
   });
 
@@ -33,13 +33,13 @@ describe('roomStore', () => {
   });
 
   it('findByPlayerId 按 userId 查房间', () => {
-    const created = store.create('h1', player('h1', true));
+    const created = store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     expect(store.findByPlayerId('h1')?.roomId).toBe(created.roomId);
   });
 
   it('findPublic 返回所有 waiting/ready 房间的投影', () => {
-    store.create('h1', player('h1', true));
-    store.create('h2', player('h2', true));
+    store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
+    store.create('h2', player('h2', true), { roundMode: 'single', games: ['schulte'] });
     const pubs = store.findPublic();
     expect(pubs).toHaveLength(2);
     pubs.forEach((p) => {
@@ -48,13 +48,13 @@ describe('roomStore', () => {
   });
 
   it('findPublic 不返回 playing/finished 房间', () => {
-    const r = store.create('h1', player('h1', true));
+    const r = store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     store.update(r.roomId, (room) => { room.state = 'playing'; });
     expect(store.findPublic()).toHaveLength(0);
   });
 
   it('update 更新房间（返回更新后的 room）', () => {
-    const r = store.create('h1', player('h1', true));
+    const r = store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     const updated = store.update(r.roomId, (room) => {
       room.state = 'ready';
     });
@@ -67,14 +67,14 @@ describe('roomStore', () => {
   });
 
   it('remove 删除房间', () => {
-    const r = store.create('h1', player('h1', true));
+    const r = store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     store.remove(r.roomId);
     expect(store.get(r.roomId)).toBeNull();
   });
 
   it('count 统计房间数', () => {
     expect(store.count()).toBe(0);
-    store.create('h1', player('h1', true));
+    store.create('h1', player('h1', true), { roundMode: 'single', games: ['schulte'] });
     expect(store.count()).toBe(1);
   });
 });

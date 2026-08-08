@@ -13,6 +13,11 @@ const makeRoom = (overrides: Partial<Room> = {}): Room => ({
   players: [
     { id: 'h1', socketId: 's1', name: '房主', avatar: '🦊', ready: true, isHost: true, connected: true },
   ],
+  roundMode: 'single',
+  gameQueue: ['schulte'],
+  currentQueueIndex: 0,
+  roundResults: [],
+  hostCanChangeGames: false,
   ...overrides,
 });
 
@@ -28,6 +33,8 @@ describe('roomHelpers', () => {
         playerCount: 1,
         gameMode: 'schulte',
         state: 'waiting',
+        roundMode: 'single',
+        totalInRound: 1,
       });
     });
 
@@ -88,6 +95,11 @@ describe('roomHelpers', () => {
         state: 'waiting',
         players: room.players,
         gameMode: 'schulte',
+        roundMode: 'single',
+        gameQueue: ['schulte'],
+        currentQueueIndex: 0,
+        totalInRound: 1,
+        hostCanChangeGames: false,
       });
     });
   });

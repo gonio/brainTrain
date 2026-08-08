@@ -13,6 +13,8 @@ export function toPublicRoom(room: Room): PublicRoom | null {
     playerCount: room.players.length,
     gameMode: room.gameMode,
     state: room.state,
+    roundMode: room.roundMode,
+    totalInRound: room.gameQueue.length,
   };
 }
 
@@ -39,5 +41,10 @@ export function toRoomStatePayload(room: Room): RoomStatePayload {
     state: room.state,
     players: room.players,
     gameMode: room.gameMode,
+    roundMode: room.roundMode,
+    gameQueue: room.gameQueue,
+    currentQueueIndex: room.currentQueueIndex,
+    totalInRound: room.gameQueue.length,
+    hostCanChangeGames: room.hostCanChangeGames,
   };
 }
