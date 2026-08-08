@@ -51,6 +51,7 @@ export interface GameEndPayload {
   winner: 'me' | 'opponent' | 'draw';
   myResult: PlayerResult;
   opponentResult: PlayerResult;
+  detail?: Record<string, unknown>;
 }
 
 // game:tap 处理后的即时结果（可选，第一版客户端本地判断，不强制下发）

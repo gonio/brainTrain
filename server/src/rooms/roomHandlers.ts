@@ -6,7 +6,7 @@ import { createLobbyService } from './lobbyService.js';
 import { createMatchService } from './matchService.js';
 import { canTransition, nextWaitingState } from './roomStateMachine.js';
 import { toPublicRoom, isFull, allReady, toRoomStatePayload, makeRoomName } from './roomHelpers.js';
-import { ENGINES, getEngine, gameState, type VersusGame } from '../games/index.js';
+import { getEngine, gameState, type VersusGame } from '../games/index.js';
 import type { GameSeed, PlayerProgress, GameAction, FinalizedProgress } from '../games/types.js';
 import { recordMatch, type MatchPlayerInput } from '../stats/statsRepository.js';
 import type { PlayerResult, GameEndPayload } from '../types/schulte.js';
@@ -27,6 +27,27 @@ function validateGames(roundMode: 'single' | 'multi', games: unknown): GameMode[
   if (roundMode === 'single' && games.length !== 1) return null;
   if (roundMode === 'multi' && (games.length < 2 || games.length > 4)) return null;
   return games as GameMode[];
+}
+
+// 从 detail 提取 found/errors（各游戏语义不同），用于战绩累计
+function extractFoundErrors(detail: Record<string, unknown>, mode: GameMode): { found: number; errors: number } {
+  if (mode === 'schulte') {
+    return { found: (detail.found as number) ?? 0, errors: (detail.errors as number) ?? 0 };
+  }
+  if (mode === 'stroop') {
+    return { found: (detail.correct as number) ?? 0, errors: (detail.errors as number) ?? 0 };
+  }
+  if (mode === 'sequence') {
+    const correct = (detail.positionCorrect as number) ?? 0;
+    const total = 6;  // SEQUENCE_LENGTH
+    return { found: correct, errors: total - correct };
+  }
+  if (mode === 'bottle') {
+    const matched = (detail.matched as number) ?? 0;
+    const total = (detail.total as number) ?? 6;
+    return { found: matched, errors: total - matched };
+  }
+  return { found: 0, errors: 0 };
 }
 
 export function attachRoomHandlers(io: SocketIOServer): void {
@@ -316,11 +337,12 @@ export function attachRoomHandlers(io: SocketIOServer): void {
       // 字色：任一方完成 → 给对方启动宽限倒计时（只一次）
       if (anyDone && !game.graceTimerStarted) {
         game.graceTimerStarted = true;
-        io.to(room.roomId).emit('game:grace', { seconds: 10 });
+        const graceSec = game.seed.mode === 'stroop' ? game.seed.finishGraceSec : 10;
+        io.to(room.roomId).emit('game:grace', { seconds: graceSec });
         const graceTimer = setTimeout(() => {
           const g = gameState.get(room.roomId);
           if (g && !g.ended) endGame(room, 'grace_timeout');
-        }, 10000);
+        }, graceSec * 1000);
         const t = roomTimers.get(room.roomId);
         if (t) t.grace = graceTimer;
       }
@@ -370,8 +392,12 @@ export function attachRoomHandlers(io: SocketIOServer): void {
     const aWon = winnerFromA === 'me';
     const bWon = winnerFromA === 'opponent';
 
-    const aResult: PlayerResult = { playerId: aId, found: 0, errors: 0, accuracy: aFinal.accuracy, timeMs: aFinal.timeMs, done: aFinal.done, won: aWon };
-    const bResult: PlayerResult = { playerId: bId, found: 0, errors: 0, accuracy: bFinal.accuracy, timeMs: bFinal.timeMs, done: bFinal.done, won: bWon };
+    // 各游戏从 detail 提取 found/errors，避免硬编码 0 把累计战绩归零
+    const aFE = extractFoundErrors(aFinal.detail, game.mode);
+    const bFE = extractFoundErrors(bFinal.detail, game.mode);
+
+    const aResult: PlayerResult = { playerId: aId, found: aFE.found, errors: aFE.errors, accuracy: aFinal.accuracy, timeMs: aFinal.timeMs, done: aFinal.done, won: aWon };
+    const bResult: PlayerResult = { playerId: bId, found: bFE.found, errors: bFE.errors, accuracy: bFinal.accuracy, timeMs: bFinal.timeMs, done: bFinal.done, won: bWon };
 
     emitGameEndTo(aId, aResult, bResult, aFinal.detail);
     emitGameEndTo(bId, bResult, aResult, bFinal.detail);
@@ -380,8 +406,8 @@ export function attachRoomHandlers(io: SocketIOServer): void {
     const playerA = room.players.find((p) => p.id === aId);
     const playerB = room.players.find((p) => p.id === bId);
     const playersForStats: MatchPlayerInput[] = [
-      { playerId: aId, name: playerA?.name ?? '未知', avatar: playerA?.avatar ?? '❓', found: 0, errors: 0, accuracy: aFinal.accuracy, timeMs: aFinal.timeMs, done: aFinal.done, won: aWon },
-      { playerId: bId, name: playerB?.name ?? '未知', avatar: playerB?.avatar ?? '❓', found: 0, errors: 0, accuracy: bFinal.accuracy, timeMs: bFinal.timeMs, done: bFinal.done, won: bWon },
+      { playerId: aId, name: playerA?.name ?? '未知', avatar: playerA?.avatar ?? '❓', found: aFE.found, errors: aFE.errors, accuracy: aFinal.accuracy, timeMs: aFinal.timeMs, done: aFinal.done, won: aWon },
+      { playerId: bId, name: playerB?.name ?? '未知', avatar: playerB?.avatar ?? '❓', found: bFE.found, errors: bFE.errors, accuracy: bFinal.accuracy, timeMs: bFinal.timeMs, done: bFinal.done, won: bWon },
     ];
     const winnerId = aWon ? aId : bWon ? bId : null;
     recordMatch({ roomId: room.roomId, gameMode: room.gameMode, winnerId, players: playersForStats }).catch((err) => console.error('[stats] 战绩写入失败:', err));
@@ -436,7 +462,7 @@ export function attachRoomHandlers(io: SocketIOServer): void {
 
   function emitGameEndTo(viewerId: string, myResult: PlayerResult, opponentResult: PlayerResult, detail: Record<string, unknown>): void {
     const winner: 'me' | 'opponent' | 'draw' = myResult.won ? 'me' : (opponentResult.won ? 'opponent' : 'draw');
-    const payload: GameEndPayload & { detail?: Record<string, unknown> } = { winner, myResult, opponentResult, detail };
+    const payload: GameEndPayload = { winner, myResult, opponentResult, detail };
     const sock = findSocketByUserId(io, viewerId);
     sock?.emit('game:end', payload);
   }
