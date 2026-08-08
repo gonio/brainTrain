@@ -4,13 +4,16 @@ import { motion } from 'framer-motion';
 interface VersusSchulteBoardProps {
   grid: number[];          // 服务器下发的表
   size: number;            // 如 5（5x5）
+  order: number[];                          // 服务器按 direction 生成的要点顺序
+  direction: 'forward' | 'reverse' | 'random';  // 当前模式
   onTap: (cellIndex: number) => void;  // 点击上报（emit game:tap）
   disabled?: boolean;      // 倒计时/结束时禁用
 }
 
 // 舒尔特对战棋盘：grid 来自服务器，点击本地即时反馈 + 上报。
 // 不本地算分（服务器权威）。本地 found 只用于决定「下一个该点的数」做视觉反馈。
-export function VersusSchulteBoard({ grid, size, onTap, disabled = false }: VersusSchulteBoardProps) {
+// order 决定该点序列：forward = 1..N，reverse = N..1，random = 打乱。
+export function VersusSchulteBoard({ grid, size, order, direction, onTap, disabled = false }: VersusSchulteBoardProps) {
   // 本地已正确点数（只用于判断下一个该点的数 + 视觉）
   const foundRef = useRef(0);
   const [clickedCells, setClickedCells] = useState<Set<number>>(new Set());
@@ -19,13 +22,13 @@ export function VersusSchulteBoard({ grid, size, onTap, disabled = false }: Vers
 
   const handleClick = useCallback((cellIndex: number) => {
     if (disabled) return;
-    const expectedNumber = foundRef.current + 1;
+    const expected = order[foundRef.current];
     const tappedNumber = grid[cellIndex];
 
     // 无论对错都上报（服务器记分）
     onTap(cellIndex);
 
-    if (tappedNumber === expectedNumber) {
+    if (tappedNumber === expected) {
       // 对：本地推进
       foundRef.current += 1;
       setClickedCells((prev) => new Set(prev).add(cellIndex));
@@ -35,10 +38,13 @@ export function VersusSchulteBoard({ grid, size, onTap, disabled = false }: Vers
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       wrongTimerRef.current = setTimeout(() => setWrongCell(null), 450);
     }
-  }, [disabled, grid, onTap]);
+  }, [disabled, grid, onTap, order]);
 
   return (
-    <div className="flex items-center justify-center w-full">
+    <div className="flex flex-col items-center justify-center w-full gap-2">
+      <p className="text-sm text-gray-500">
+        {direction === 'forward' ? '正序' : direction === 'reverse' ? '反序' : '乱序'} · 下一个：{order[foundRef.current] ?? '✓'}
+      </p>
       <div className="relative w-full max-w-md aspect-square bg-surface-container-low rounded-xl p-4 shadow-2xl">
         <div
           className="grid gap-3 h-full w-full"

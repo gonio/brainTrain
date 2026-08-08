@@ -9,9 +9,10 @@ vi.mock('framer-motion', () => ({
 
 describe('VersusSchulteBoard', () => {
   const grid = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // 3x3 简化测试
+  const order = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // 正序要点序列
 
   it('渲染 grid 所有数字', () => {
-    render(<VersusSchulteBoard grid={grid} size={3} onTap={() => {}} />);
+    render(<VersusSchulteBoard grid={grid} size={3} order={order} direction="forward" onTap={() => {}} />);
     for (const n of grid) {
       expect(screen.getByText(String(n))).toBeInTheDocument();
     }
@@ -19,7 +20,7 @@ describe('VersusSchulteBoard', () => {
 
   it('点击正确数字触发 onTap（cellIndex）', () => {
     const onTap = vi.fn();
-    render(<VersusSchulteBoard grid={grid} size={3} onTap={onTap} />);
+    render(<VersusSchulteBoard grid={grid} size={3} order={order} direction="forward" onTap={onTap} />);
     // 该点 1，grid[0]=1，cellIndex=0
     fireEvent.click(screen.getByText('1'));
     expect(onTap).toHaveBeenCalledWith(0);
@@ -27,7 +28,7 @@ describe('VersusSchulteBoard', () => {
 
   it('点错不推进（但仍 emit tap 让服务器记错）', () => {
     const onTap = vi.fn();
-    render(<VersusSchulteBoard grid={grid} size={3} onTap={onTap} />);
+    render(<VersusSchulteBoard grid={grid} size={3} order={order} direction="forward" onTap={onTap} />);
     // 该点 1，但点 grid[1]=2
     fireEvent.click(screen.getByText('2'));
     expect(onTap).toHaveBeenCalledWith(1);
@@ -38,8 +39,20 @@ describe('VersusSchulteBoard', () => {
 
   it('disabled 时不响应点击', () => {
     const onTap = vi.fn();
-    render(<VersusSchulteBoard grid={grid} size={3} onTap={onTap} disabled />);
+    render(<VersusSchulteBoard grid={grid} size={3} order={order} direction="forward" onTap={onTap} disabled />);
     fireEvent.click(screen.getByText('1'));
     expect(onTap).not.toHaveBeenCalled();
+  });
+
+  it('reverse 顺序：先点 9 才算正确', () => {
+    const onTap = vi.fn();
+    const reverseOrder = [9, 8, 7, 6, 5, 4, 3, 2, 1];
+    render(<VersusSchulteBoard grid={grid} size={3} order={reverseOrder} direction="reverse" onTap={onTap} />);
+    // 该点 9（grid[8]=9，cellIndex=8）
+    fireEvent.click(screen.getByText('9'));
+    expect(onTap).toHaveBeenCalledWith(8);
+    // 接下来该点 8（grid[7]=8，cellIndex=7）
+    fireEvent.click(screen.getByText('8'));
+    expect(onTap).toHaveBeenCalledWith(7);
   });
 });
