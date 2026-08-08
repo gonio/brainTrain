@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useVersusRoomStore } from '../stores/versusRoomStore';
 import type {
   PublicRoom, RoomStatePayload, CountdownPayload,
-  GameEndPayload, RoomErrorPayload, MatchFoundPayload,
+  VersusGameEnd, RoomErrorPayload, MatchFoundPayload,
   VersusGameStart, VersusGameProgress,
   NextRoundPayload, RoundEndPayload, GracePayload,
 } from '../types/versus';
@@ -49,7 +49,7 @@ export async function initVersusSession(): Promise<Socket | null> {
   socket.on('room:countdown', (d: CountdownPayload) => store().setCountdown(d.remaining));
   socket.on('game:start', (d: VersusGameStart) => store().onGameStart(d));
   socket.on('game:progress', (d: VersusGameProgress) => store().onGameProgress(d));
-  socket.on('game:end', (d: GameEndPayload) => store().onGameEnd(d));
+  socket.on('game:end', (d: VersusGameEnd) => store().onGameEnd(d));
   socket.on('game:grace', (d: GracePayload) => store().setGrace(d.seconds));
   socket.on('room:nextRound', (d: NextRoundPayload) => store().onNextRound(d));
   socket.on('room:roundEnd', (d: RoundEndPayload) => store().onRoundEnd(d));

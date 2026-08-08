@@ -1,6 +1,10 @@
 export { VersusSchulteBoard } from './VersusSchulteBoard';
+export { VersusStroopBoard } from './VersusStroopBoard';
+export { VersusSequenceBoard } from './VersusSequenceBoard';
+export { VersusBottleBoard } from './VersusBottleBoard';
 export { PlayerProgress } from './PlayerProgress';
 export { RoomHUD } from './RoomHUD';
 export { CountdownOverlay } from './CountdownOverlay';
 export { VersusResultDialog } from './VersusResultDialog';
+export { RoundResultDialog } from './RoundResultDialog';
 export { CreateRoomModal } from './CreateRoomModal';

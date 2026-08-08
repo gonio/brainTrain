@@ -2,7 +2,7 @@
 // lobbyRooms 也存在这里，跨页面共享（解决返回大厅后列表消失问题）。
 import { create } from 'zustand';
 import type {
-  RoomStatePayload, GameEndPayload, MatchFoundPayload, VersusPlayer, RoomState, PublicRoom,
+  RoomStatePayload, VersusGameEnd, MatchFoundPayload, VersusPlayer, RoomState, PublicRoom,
   VersusGameStart, VersusGameProgress, RoundInfo, RoundGameResult,
   NextRoundPayload, RoundEndPayload,
 } from '../types/versus';
@@ -24,7 +24,7 @@ interface VersusRoomState {
   countdown: number | null;
   gameData: VersusGameStart | null;
   progress: VersusGameProgress | null;
-  endResult: GameEndPayload | null;
+  endResult: VersusGameEnd | null;
   // 多游戏轮次信息
   roundInfo: RoundInfo | null;
   roundResults: RoundGameResult[];
@@ -39,7 +39,7 @@ interface VersusRoomState {
   onMatchFound: (payload: MatchFoundPayload) => void;
   onGameStart: (payload: VersusGameStart) => void;
   onGameProgress: (payload: VersusGameProgress) => void;
-  onGameEnd: (payload: GameEndPayload) => void;
+  onGameEnd: (payload: VersusGameEnd) => void;
   setRoundInfo: (info: RoundInfo) => void;
   onNextRound: (payload: NextRoundPayload) => void;
   onRoundEnd: (payload: RoundEndPayload) => void;
