@@ -425,33 +425,37 @@ export function attachRoomHandlers(io: SocketIOServer): void {
 
     gameState.remove(room.roomId);
 
-    // 多局推进
-    const nextIndex = room.currentQueueIndex + 1;
-    if (nextIndex < room.gameQueue.length) {
-      // 还有下一局
-      room.currentQueueIndex = nextIndex;
-      room.gameMode = room.gameQueue[nextIndex];
-      room.state = 'finished';
-      const newState = nextWaitingState(room);
-      if (canTransition('finished', newState)) room.state = newState;
-      room.players.forEach((p) => { p.ready = false; });
-      broadcastRoomState(io, room);
-      io.to(room.roomId).emit('room:nextRound', {
-        nextMode: room.gameMode,
-        queueIndex: room.currentQueueIndex,
-        totalInRound: room.gameQueue.length,
-        roundResults: room.roundResults,
-      });
-    } else {
-      // 本轮结束
-      room.hostCanChangeGames = true;
-      room.state = 'finished';
-      const newState = nextWaitingState(room);
-      if (canTransition('finished', newState)) room.state = newState;
-      room.players.forEach((p) => { p.ready = false; });
-      broadcastRoomState(io, room);
-      io.to(room.roomId).emit('room:roundEnd', { roundResults: room.roundResults });
-    }
+    // 多局推进：延迟推进让玩家先看到本局结果弹窗
+    // room.state 立即转 'finished'（不再 'playing'），但 nextRound/roundEnd 事件 +
+    // ready 重置 + 状态广播延迟到 5 秒后触发，避免立刻覆盖 store 的 result 视图。
+    const NEXT_ROUND_DELAY_MS = 5000;
+    room.state = 'finished';
+    setTimeout(() => {
+      const nextIndex = room.currentQueueIndex + 1;
+      if (nextIndex < room.gameQueue.length) {
+        // 还有下一局
+        room.currentQueueIndex = nextIndex;
+        room.gameMode = room.gameQueue[nextIndex];
+        const newState = nextWaitingState(room);
+        if (canTransition('finished', newState)) room.state = newState;
+        room.players.forEach((p) => { p.ready = false; });
+        broadcastRoomState(io, room);
+        io.to(room.roomId).emit('room:nextRound', {
+          nextMode: room.gameMode,
+          queueIndex: room.currentQueueIndex,
+          totalInRound: room.gameQueue.length,
+          roundResults: room.roundResults,
+        });
+      } else {
+        // 本轮结束
+        room.hostCanChangeGames = true;
+        const newState = nextWaitingState(room);
+        if (canTransition('finished', newState)) room.state = newState;
+        room.players.forEach((p) => { p.ready = false; });
+        broadcastRoomState(io, room);
+        io.to(room.roomId).emit('room:roundEnd', { roundResults: room.roundResults });
+      }
+    }, NEXT_ROUND_DELAY_MS);
   }
 
   function determineWinner(a: { accuracy: number; timeMs: number }, b: { accuracy: number; timeMs: number }): 'me' | 'opponent' | 'draw' {

@@ -65,7 +65,7 @@ export function VersusResultDialog({ result, mode, detail, onPlayAgain, onExit, 
         <h2 className={`font-headline text-4xl font-extrabold text-center mb-6 ${titleColor}`}>{title}</h2>
         <div className="space-y-3 mb-6">
           <ResultRow label="我" result={myResult} highlight={winner === 'me'} mode={mode} detail={detail} />
-          <ResultRow label="对手" result={opponentResult} highlight={winner === 'opponent'} mode={mode} detail={detail} />
+          <ResultRow label="对手" result={opponentResult} highlight={winner === 'opponent'} mode={mode} detail={undefined} />
         </div>
         <div className="space-y-3">
           <button
