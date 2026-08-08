@@ -103,8 +103,8 @@ describe('多游戏对战集成', () => {
     // guest 再提交 → 结算
     guest.emit('game:action', { mode: 'sequence', payload: { userSequence: seed.sequence } });
     const end = await hostEndP;
-    // 双方都对 → draw
-    expect(end.winner).toBe('draw');
+    // 双方都对 → 比时间，host 先提交更快 → host 胜（或平局如果时间相同）
+    expect(['me', 'draw']).toContain(end.winner);
   }, 25000);
 
   it('多局：舒尔特→字色，打完舒尔特收到 room:nextRound', async () => {
@@ -143,12 +143,14 @@ describe('多游戏对战集成', () => {
   it('reconfigure：本轮结束后房主改游戏', async () => {
     const { host, start } = await setupGame(['schulte'], 'single');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
-    await expectEvent(host, 'room:roundEnd', 8000);
+    // 先注册 roundEnd 监听，再打完游戏触发它
+    const roundEndP = expectEvent(host, 'room:roundEnd', 8000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
       await new Promise((r) => setTimeout(r, 10));
     }
+    await roundEndP;
     // 等 hostCanChangeGames
     await expectEvent<{ hostCanChangeGames: boolean }>(host, 'room:state', 3000);
     // reconfigure
@@ -162,13 +164,14 @@ describe('多游戏对战集成', () => {
   it('非房主退出 → 本轮重置（roundResults 清空）', async () => {
     const { host, guest, start } = await setupGame(['schulte', 'stroop'], 'multi');
     const schulteSeed = start.seed as { grid: number[]; order: number[] };
-    // 打完第一局
-    await expectEvent(host, 'room:nextRound', 8000);
+    // 先注册 nextRound 监听，再打完第一局触发它
+    const nextRoundP = expectEvent(host, 'room:nextRound', 8000);
     for (let i = 0; i < schulteSeed.order.length; i++) {
       const cellIndex = schulteSeed.grid.indexOf(schulteSeed.order[i]);
       host.emit('game:action', { mode: 'schulte', payload: { cellIndex } });
       await new Promise((r) => setTimeout(r, 10));
     }
+    await nextRoundP;
     // guest 退出
     const stateP = expectEvent<{ currentQueueIndex: number; roundResults: unknown[] }>(host, 'room:state', 3000);
     guest.emit('room:leave');
