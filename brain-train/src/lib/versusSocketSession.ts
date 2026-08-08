@@ -24,6 +24,13 @@ export async function initVersusSession(): Promise<Socket | null> {
   if (!token) return null;
 
   const socket = connectVersus(token);
+  // 确保 socket 连接成功后再继续（subscribe 依赖连接）
+  if (!socket.connected) {
+    await new Promise<void>((resolve) => {
+      socket.once('connect', () => resolve());
+      socket.once('connect_error', () => resolve()); // 连接失败也继续，不阻塞
+    });
+  }
   initialized = true;
 
   const store = useVersusRoomStore.getState;
