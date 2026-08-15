@@ -18,6 +18,7 @@ import { Syllogism } from './pages/games/Syllogism';
 import { Truth } from './pages/games/Truth';
 import { Lineup } from './pages/games/Lineup';
 import { Zebra } from './pages/games/Zebra';
+import { Fallacy } from './pages/games/Fallacy';
 import { Quest } from './pages/Quest';
 import { Versus } from './pages/Versus';
 import { VersusRoom } from './pages/VersusRoom';
@@ -81,6 +82,12 @@ const games: {
     mode: 'zebra',
     title: '左邻右舍',
     description: '演绎推理训练',
+    priority: 'P2',
+  },
+  {
+    mode: 'fallacy',
+    title: '找谬误',
+    description: '谬误批判训练',
     priority: 'P2',
   },
 ];
@@ -359,6 +366,7 @@ export const router = createBrowserRouter([
       { path: 'games/truth', element: <Truth /> },
       { path: 'games/lineup', element: <Lineup /> },
       { path: 'games/zebra', element: <Zebra /> },
+      { path: 'games/fallacy', element: <Fallacy /> },
       { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
     ]
   }
