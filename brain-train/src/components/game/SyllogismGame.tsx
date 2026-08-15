@@ -22,20 +22,20 @@ export function SyllogismGame({ engineLevel, isActive, rng, onRoundEnd }: LogicR
     if (ended || !isActive) return;
     setLastPick(choice);
     const used = attempts + 1;
+    // 音效归属约定：终结音效（答对/机会用完）由 LogicSessionShell 播，组件只在非终结答错时播 wrong
     if (choice === puzzle.valid) {
       setVerdict('correct');
       setEnded(true);
-      playEffect('correct');
       onRoundEnd({ correct: true, attempts: used });
       return;
     }
-    playEffect('wrong');
     setVerdict('wrong');
     if (used >= MAX_ATTEMPTS) {
       setEnded(true);
       onRoundEnd({ correct: false, attempts: MAX_ATTEMPTS });
       return;
     }
+    playEffect('wrong');
     setAttempts(used); // 还有剩余机会，提示「再想想」
   };
 

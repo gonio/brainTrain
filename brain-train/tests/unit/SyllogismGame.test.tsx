@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SyllogismGame } from '@/components/game/SyllogismGame';
 import { generateSyllogismPuzzle } from '@/lib/logic/syllogismEngine';
-import { mulberry32 } from './logicEngines.test';
+import { mulberry32 } from '@/lib/rng';
 
 // 组件与测试各自调一次 generateSyllogismPuzzle(3, mulberry32(42))，得到同一道题
 const expected = generateSyllogismPuzzle(3, mulberry32(42)).valid;
