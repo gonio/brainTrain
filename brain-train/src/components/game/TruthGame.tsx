@@ -22,9 +22,11 @@ export function TruthGame({ engineLevel, isActive, rng, onRoundEnd }: LogicRound
   const { playEffect } = useAudio();
   // 同一次挂载内题目固定：rng 只在首次渲染消费一次
   const puzzle = useMemo(() => generateTruthPuzzle(engineLevel, rng), [engineLevel, rng]);
-  // 玩家判定的身份（true=骑士），初始全当骑士
-  const [knight, setKnight] = useState<boolean[]>(() =>
-    Array(puzzle.statements.length).fill(true),
+  // 玩家判定的身份（true=骑士 / false=无赖 / null=未选）。
+  // 初始全部未选：必须逐人显式选择后才能提交，
+  // 否则谜底恰为全骑士的题会被盲点「提交答案」直接白嫖 3 星。
+  const [guesses, setGuesses] = useState<(boolean | null)[]>(() =>
+    Array(puzzle.statements.length).fill(null),
   );
   const [attempts, setAttempts] = useState(0); // 已用作答次数
   const [verdict, setVerdict] = useState<Verdict>(null); // 最后一次作答对错
@@ -32,14 +34,17 @@ export function TruthGame({ engineLevel, isActive, rng, onRoundEnd }: LogicRound
 
   const setIdentity = (i: number, value: boolean) => {
     if (ended || !isActive) return;
-    setKnight((prev) => prev.map((x, j) => (j === i ? value : x)));
+    setGuesses((prev) => prev.map((x, j) => (j === i ? value : x)));
   };
 
   const handleSubmit = () => {
     if (ended || !isActive) return;
+    // 有人未判定不允许提交（按钮已禁用，此处双保险）
+    if (guesses.some((g) => g === null)) return;
     const used = attempts + 1;
-    // 音效归属约定：终结音效（答对/机会用完）由 LogicSessionShell 播，组件只在非终结答错时播 wrong
-    if (arraysEqual(knight, puzzle.knight)) {
+    // 音效归属约定：终结音效（答对/机会用完）由调用方（LogicSessionShell / QuestLogicRunner）播，
+    // 组件只在非终结答错时播 wrong
+    if (arraysEqual(guesses as boolean[], puzzle.knight)) {
       setVerdict('correct');
       setEnded(true);
       onRoundEnd({ correct: true, attempts: used });
@@ -89,14 +94,14 @@ export function TruthGame({ engineLevel, isActive, rng, onRoundEnd }: LogicRound
               <button
                 onClick={() => setIdentity(i, true)}
                 disabled={ended || !isActive}
-                className={toggleClass(knight[i])}
+                className={toggleClass(guesses[i] === true)}
               >
                 骑士
               </button>
               <button
                 onClick={() => setIdentity(i, false)}
                 disabled={ended || !isActive}
-                className={toggleClass(!knight[i])}
+                className={toggleClass(guesses[i] === false)}
               >
                 无赖
               </button>
@@ -105,11 +110,11 @@ export function TruthGame({ engineLevel, isActive, rng, onRoundEnd }: LogicRound
         </div>
       ))}
 
-      {/* 提交按钮（全宽） */}
+      {/* 提交按钮（全宽）：所有人身份都显式选定后才可点 */}
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={handleSubmit}
-        disabled={ended || !isActive}
+        disabled={ended || !isActive || guesses.some((g) => g === null)}
         className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-headline font-bold hover:bg-primary/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-default"
       >
         提交答案

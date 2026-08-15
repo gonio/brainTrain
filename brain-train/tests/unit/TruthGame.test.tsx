@@ -17,13 +17,35 @@ describe('TruthGame', () => {
   it('提交后回调一次作答结果', () => {
     const onRoundEnd = vi.fn();
     render(<TruthGame engineLevel={3} isActive={true} rng={mulberry32(7)} onRoundEnd={onRoundEnd} />);
-    // 初始全骑士，把谜底为无赖的人拨到「无赖」，使本次提交必对
+    // 必须逐人显式选择身份才能提交；按谜底拨好，使本次提交必对
+    const knightButtons = screen.getAllByRole('button', { name: '骑士' });
     const knaveButtons = screen.getAllByRole('button', { name: '无赖' });
     expected.forEach((isKnight, i) => {
-      if (!isKnight) fireEvent.click(knaveButtons[i]);
+      fireEvent.click(isKnight ? knightButtons[i] : knaveButtons[i]);
     });
     fireEvent.click(screen.getByText('提交答案'));
     expect(onRoundEnd).toHaveBeenCalledTimes(1);
     expect(onRoundEnd.mock.calls[0][0].attempts).toBe(1);
+  });
+  it('未选完全员身份前提交按钮禁用', () => {
+    const onRoundEnd = vi.fn();
+    render(<TruthGame engineLevel={3} isActive={true} rng={mulberry32(7)} onRoundEnd={onRoundEnd} />);
+    // 初始所有人未选：禁用
+    expect(screen.getByText('提交答案')).toBeDisabled();
+    // 只选了一部分：仍禁用，点击也不产生任何回调
+    fireEvent.click(screen.getAllByRole('button', { name: '骑士' })[0]);
+    expect(screen.getByText('提交答案')).toBeDisabled();
+    fireEvent.click(screen.getByText('提交答案'));
+    expect(onRoundEnd).not.toHaveBeenCalled();
+  });
+  it('全骑士谜底也必须显式选择才能提交（防盲点白嫖回归）', () => {
+    const onRoundEnd = vi.fn();
+    // seed 66 → 3 人岛谜底全骑士：旧版初始全当骑士时，盲点提交答案直接命中 3 星
+    expect(generateTruthPuzzle(3, mulberry32(66)).knight).toEqual([true, true, true]);
+    render(<TruthGame engineLevel={3} isActive={true} rng={mulberry32(66)} onRoundEnd={onRoundEnd} />);
+    const submit = screen.getByText('提交答案');
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
+    expect(onRoundEnd).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,8 @@
 // 逻辑谜题闯关 Runner 工厂：单题、最多 3 次作答、尝试次数制评星
 import { getDifficulty } from '@/lib/questGameConfig';
 import { starsForAttempts, type LogicRoundOutcome } from '@/lib/logic/attempts';
+import { useAudio } from '@/hooks/useAudio';
+import { useSettingsStore } from '@/stores/settingsStore';
 import type { LogicRoundProps } from '@/components/game/LogicSessionShell';
 import type { GameId, LogicPuzzleDifficultyParams, QuestResult } from '@/types/quest';
 import type { RunnerProps } from './QuestRunner';
@@ -13,6 +15,9 @@ export function makeLogicRunner(
     const level = getDifficulty(gameId, difficulty);
     const { engineLevel } = level.params as LogicPuzzleDifficultyParams;
 
+    const { soundEnabled } = useSettingsStore();
+    const { playEffect } = useAudio();
+
     const handleRoundEnd = (o: LogicRoundOutcome) => {
       const stars = o.correct ? starsForAttempts(o.attempts) : 0;
       const result: QuestResult = {
@@ -24,6 +29,10 @@ export function makeLogicRunner(
         details: { engineLevel, correct: o.correct, attempts: o.attempts },
       };
       onComplete(result);
+      // 终结音效：答对 complete / 机会用完 wrong（对齐 QuestStroopRunner 的约定）
+      if (soundEnabled) {
+        playEffect(o.correct ? 'complete' : 'wrong');
+      }
     };
 
     return <Component engineLevel={engineLevel} isActive={true} onRoundEnd={handleRoundEnd} />;

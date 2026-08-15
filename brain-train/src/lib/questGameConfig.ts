@@ -81,7 +81,8 @@ const L = (difficulty: number, engineLevel: number): DifficultyLevel<LogicPuzzle
 
 // 逻辑门：engineLevel = 门数量，1-20 取 10 个点
 export const GATES_DIFFICULTIES = [L(1, 1), L(2, 2), L(3, 3), L(4, 5), L(5, 7), L(6, 9), L(7, 11), L(8, 13), L(9, 16), L(10, 20)];
-// 真假岛：engineLevel = 岛民数，只有 3-6，低级重复 3 人但陈述类型逐步解锁
+// 真假岛：engineLevel = 岛民数（仅 3-6）。陈述类型池只由岛民数决定（见 truthEngine.typePool），
+// 故 engineLevel 相同的关卡（如 L1/L2 同为 3 人岛）题目分布完全一致，并非逐级解锁。
 export const TRUTH_DIFFICULTIES = [L(1, 3), L(2, 3), L(3, 4), L(4, 4), L(5, 5), L(6, 5), L(7, 5), L(8, 6), L(9, 6), L(10, 6)];
 // 排排坐 / 说得通吗 / 左邻右舍：1-20 等距取 10 点
 export const LINEUP_DIFFICULTIES = [L(1, 1), L(2, 3), L(3, 5), L(4, 7), L(5, 9), L(6, 11), L(7, 13), L(8, 15), L(9, 17), L(10, 20)];
