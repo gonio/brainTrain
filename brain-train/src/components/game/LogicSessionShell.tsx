@@ -25,6 +25,7 @@ export interface LogicRoundProps {
   engineLevel: number;
   isActive: boolean;
   rng?: () => number;
+  /** 每题只允许调用一次（答对或机会用完时）。重复调用会被外壳忽略。 */
   onRoundEnd: (o: LogicRoundOutcome) => void;
 }
 
@@ -72,6 +73,8 @@ export function LogicSessionShell({
   const [finalAccuracy, setFinalAccuracy] = useState(0);
   // 题间 500ms 定时器，卸载时清理
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // onRoundEnd 单次上抛防护：当前题结算后置 true，换题时归零
+  const roundSettledRef = useRef(false);
   // 开局 3 秒倒计时缓冲：结束后才真正 startGame（不计入游戏用时）
   const { overlay: countdownOverlay, trigger: triggerCountdown } = useStartCountdown();
 
@@ -85,9 +88,15 @@ export function LogicSessionShell({
     };
   }, []);
 
+  // 换题（key 重挂载新题）后重置单次上抛防护
+  useEffect(() => {
+    roundSettledRef.current = false;
+  }, [roundIdx]);
+
   // 真正开局：倒计时结束后抽 5 题引擎难度、清空进度、startGame
   const handleStart = useCallback(() => {
     triggerCountdown(() => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       setRoundLevels(
         Array.from({ length: ROUNDS_PER_SESSION }, () => randomLevel(engineLevels[difficulty])),
       );
@@ -103,6 +112,9 @@ export function LogicSessionShell({
   // 单题结束：记录结果、播对错音效；未够 5 题则 500ms 后自动进下一题，够 5 题则结算
   const handleRoundEnd = useCallback(
     (outcome: LogicRoundOutcome) => {
+      // 单题单次上抛契约：已结算（含 500ms 换题窗口内）的重复调用直接忽略
+      if (roundSettledRef.current) return;
+      roundSettledRef.current = true;
       playEffect(outcome.correct ? 'correct' : 'wrong');
       const next = [...outcomes, outcome];
       setOutcomes(next);
@@ -171,8 +183,9 @@ export function LogicSessionShell({
           </div>
         )}
 
-        {/* 单题渲染区：key 重挂载保证每题是干净状态 */}
-        {isPlaying && roundLevels.length === ROUNDS_PER_SESSION && (
+        {/* 单题渲染区：key 重挂载保证每题是干净状态；暂停时不卸载
+            （仅 isActive 变 false，照 Sequence.tsx），保住题内状态 */}
+        {(isPlaying || isPaused) && roundLevels.length === ROUNDS_PER_SESSION && (
           <div className="flex-1 flex flex-col justify-start py-2 mb-4">
             <div className="text-center text-sm text-muted-foreground mb-2">
               第 {roundIdx + 1}/{ROUNDS_PER_SESSION} 题
