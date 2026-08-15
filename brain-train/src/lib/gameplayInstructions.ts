@@ -1,5 +1,5 @@
 // 玩法说明配置类型
-type TrainingMode = 'schulte' | 'stroop' | 'sequence' | 'bottle';
+type TrainingMode = import('../types').TrainingMode;
 
 export interface GameplayInstructionsConfig {
   mode: TrainingMode;
@@ -132,13 +132,134 @@ export const schulteQuestInstructions: QuestGameplayInstructions = {
   hardModeNote: '第 9-10 关为一击死亡（1 命）+ 6×6 网格 + 3s/数字 + mixed 方向。',
 };
 
+// 逻辑门玩法说明
+export const gatesInstructions: GameplayInstructionsConfig = {
+  mode: 'gates',
+  title: '逻辑门',
+  description: '规则推演训练 - 推电路输出',
+  objective: '给出由 AND/OR/NOT/XOR 组成的电路图与各输入位的值，推出最终输出是 0 还是 1。',
+  howToPlay: [
+    '看清每个输入位的值（0/1）',
+    '沿导线逐级推每个门的输出',
+    '点选最终输出的值',
+    '每题最多 3 次作答机会，一局 5 题',
+  ],
+  scoringRules: [
+    '首次答对 3 星，第二次 2 星，第三次 1 星，3 次全错 0 星',
+    '得分 = 累计星数占满星比例 ×100',
+  ],
+  hardModeNote: '高难度门更多、层级更深，且混入 NOT/XOR。',
+};
+
+// 真假岛玩法说明
+export const truthInstructions: GameplayInstructionsConfig = {
+  mode: 'truth',
+  title: '真假岛',
+  description: '演绎推理训练 - 从真话假话中推出每人身份',
+  objective: '岛上每人只说真话或只说假话。根据每个人的陈述，推出谁是骑士（只说真话）、谁是无赖（只说假话）。',
+  howToPlay: [
+    '阅读每个人说的一句话',
+    '为每个人选择身份：骑士或无赖',
+    '点「提交答案」判定；答案唯一',
+    '每题最多 3 次作答机会，一局 5 题',
+  ],
+  scoringRules: [
+    '首次答对 3 星，第二次 2 星，第三次 1 星，3 次全错 0 星',
+    '得分 = 累计星数占满星比例 ×100',
+  ],
+  hardModeNote: '高难度岛民更多，陈述形式也更绕（计数、存在性断言等）。',
+};
+
+// 排排坐玩法说明
+export const lineupInstructions: GameplayInstructionsConfig = {
+  mode: 'lineup',
+  title: '排排坐',
+  description: '演绎推理训练 - 根据约束推出排队位置',
+  objective: 'N 个人排成一列，根据若干约束（先后/相邻/间隔/位置否定）推出指定位置是谁，或某人在第几位。',
+  howToPlay: [
+    '阅读全部约束条件',
+    '在脑中或草稿上排出唯一满足所有约束的队列',
+    '根据问题点选答案（人名或位置）',
+    '每题最多 3 次作答机会，一局 5 题',
+  ],
+  scoringRules: [
+    '首次答对 3 星，第二次 2 星，第三次 1 星，3 次全错 0 星',
+    '得分 = 累计星数占满星比例 ×100',
+  ],
+  hardModeNote: '高难度人数更多（至多 7 人），且会出现间隔类约束。',
+};
+
+// 说得通吗玩法说明
+export const syllogismInstructions: GameplayInstructionsConfig = {
+  mode: 'syllogism',
+  title: '说得通吗',
+  description: '演绎推理训练 - 判断三段论推理形式是否有效',
+  objective: '给出两句前提和一句结论，判断这个推理在形式上是否成立（与内容真假无关）。',
+  howToPlay: [
+    '阅读两句前提与一句结论',
+    '只根据推理形式判断「说得通」还是「说不通」',
+    '每题最多 3 次作答机会，答错可再试',
+    '一局 5 题，按作答表现评星计分',
+  ],
+  scoringRules: [
+    '首次答对 3 星，第二次 2 星，第三次 1 星，3 次全错 0 星',
+    '得分 = 累计星数占满星比例 ×100',
+  ],
+  hardModeNote: '高难度会混入含特称命题与直觉陷阱的条目。',
+};
+
+// 左邻右舍玩法说明
+export const zebraInstructions: GameplayInstructionsConfig = {
+  mode: 'zebra',
+  title: '左邻右舍',
+  description: '演绎推理训练 - 迷你斑马谜题',
+  objective: '几座房子里住着不同的人，各养不同宠物、喝不同饮料。根据交叉约束推出题目所问的归属。',
+  howToPlay: [
+    '看清人、宠物、饮料三类条目与全部线索',
+    '推出每条目各在第几座房子（答案唯一）',
+    '根据问题点选答案',
+    '每题最多 3 次作答机会，一局 5 题',
+  ],
+  scoringRules: [
+    '首次答对 3 星，第二次 2 星，第三次 1 星，3 次全错 0 星',
+    '得分 = 累计星数占满星比例 ×100',
+  ],
+  hardModeNote: '高难度有 4 座房子，线索类型更多（紧挨左侧等）。',
+};
+
+// 找谬误玩法说明
+export const fallacyInstructions: GameplayInstructionsConfig = {
+  mode: 'fallacy',
+  title: '找谬误',
+  description: '谬误批判训练 - 定位并归类逻辑谬误',
+  objective: '一段话里藏着一处逻辑谬误。先点出有问题的那句话，再选出它属于哪种谬误。',
+  howToPlay: [
+    '通读材料，材料按句切分',
+    '点选含谬误的那句话',
+    '从 8 种谬误类型中点选归类',
+    '两步全对才算答对；答错会提示是定位错还是类型错',
+    '每题最多 3 次作答机会，一局 5 题',
+  ],
+  scoringRules: [
+    '首次答对 3 星，第二次 2 星，第三次 1 星，3 次全错 0 星',
+    '得分 = 累计星数占满星比例 ×100',
+  ],
+  hardModeNote: '挑战难度材料更长、谬误更隐蔽；题库共 31 题，会循环出现。',
+};
+
 // 所有玩法说明配置映射
-// 仅包含 4 个训练模式（写入 trainingRecords 的）。
+// 仅包含 10 个训练模式（写入 trainingRecords 的）。
 // 舒尔特闯关模式（不入 trainingRecords）独立 export 为 schulteQuestInstructions，
 // 消费者（如 QuestLevelIntro 或闯关 UI）直接 import 使用，不走此 map。
-export const gameplayInstructionsMap: Record<string, GameplayInstructionsConfig> = {
+export const gameplayInstructionsMap: Record<TrainingMode, GameplayInstructionsConfig> = {
   schulte: schulteInstructions,
   stroop: stroopInstructions,
   sequence: sequenceInstructions,
   bottle: bottleInstructions,
+  gates: gatesInstructions,
+  truth: truthInstructions,
+  lineup: lineupInstructions,
+  syllogism: syllogismInstructions,
+  zebra: zebraInstructions,
+  fallacy: fallacyInstructions,
 };

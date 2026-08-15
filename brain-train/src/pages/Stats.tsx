@@ -11,6 +11,12 @@ const modeNames: Record<TrainingMode, string> = {
   stroop: '字色干扰',
   sequence: '序列记忆',
   bottle: '暗瓶排列',
+  gates: '逻辑门',
+  truth: '真假岛',
+  lineup: '排排坐',
+  syllogism: '说得通吗',
+  zebra: '左邻右舍',
+  fallacy: '找谬误',
 };
 
 // 训练模式图标
@@ -19,6 +25,12 @@ const modeIcons: Record<TrainingMode, string> = {
   stroop: '🎨',
   sequence: '🧠',
   bottle: '🍾',
+  gates: '🔌',
+  truth: '🏝️',
+  lineup: '🪑',
+  syllogism: '💬',
+  zebra: '🏠',
+  fallacy: '🕵️',
 };
 
 export function Stats() {

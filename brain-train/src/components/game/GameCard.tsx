@@ -17,6 +17,12 @@ const modeIcons: Record<TrainingMode, { icon: string; color: string }> = {
   stroop: { icon: 'palette', color: 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' },
   sequence: { icon: 'reorder', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' },
   bottle: { icon: 'science', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100' },
+  gates: { icon: 'memory', color: 'bg-violet-50 text-violet-600 group-hover:bg-violet-100' },
+  truth: { icon: 'theater_comedy', color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' },
+  lineup: { icon: 'groups', color: 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' },
+  syllogism: { icon: 'quiz', color: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100' },
+  zebra: { icon: 'home', color: 'bg-rose-50 text-rose-600 group-hover:bg-rose-100' },
+  fallacy: { icon: 'troubleshoot', color: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100' },
 };
 
 const modeColors: Record<TrainingMode, string> = {
@@ -24,6 +30,12 @@ const modeColors: Record<TrainingMode, string> = {
   stroop: 'bg-cyan-600',
   sequence: 'bg-indigo-600',
   bottle: 'bg-amber-600',
+  gates: 'bg-violet-600',
+  truth: 'bg-emerald-600',
+  lineup: 'bg-cyan-600',
+  syllogism: 'bg-indigo-600',
+  zebra: 'bg-rose-600',
+  fallacy: 'bg-amber-600',
 };
 
 export function GameCard({

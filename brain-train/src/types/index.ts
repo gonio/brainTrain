@@ -3,7 +3,25 @@ export type TrainingMode =
   | 'schulte'   // 舒尔特表
   | 'stroop'    // 字色干扰
   | 'sequence'  // 序列记忆
-  | 'bottle';   // 暗瓶排列
+  | 'bottle'    // 暗瓶排列
+  | 'gates'     // 逻辑门
+  | 'truth'     // 真假岛
+  | 'lineup'    // 排排坐
+  | 'syllogism' // 说得通吗
+  | 'zebra'     // 左邻右舍
+  | 'fallacy';  // 找谬误
+
+// 移植的逻辑谜题游戏 id（TrainingMode 的子集）
+export type LogicGameId = 'gates' | 'truth' | 'lineup' | 'syllogism' | 'zebra' | 'fallacy';
+
+export const LOGIC_GAME_NAMES: Record<LogicGameId, string> = {
+  gates: '逻辑门',
+  truth: '真假岛',
+  lineup: '排排坐',
+  syllogism: '说得通吗',
+  zebra: '左邻右舍',
+  fallacy: '找谬误',
+};
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -85,8 +103,15 @@ export interface BottleDetails {
   completionTime: number;        // 完成用时（秒）
 }
 
+// 逻辑谜题统一训练详情：5 题一局，每题记对错与作答次数
+export interface LogicPuzzleDetails {
+  game: LogicGameId;
+  engineLevel: number;             // 本局使用的引擎难度（1-20；找谬误为题库难度 1-3）
+  rounds: { correct: boolean; attempts: number }[];
+}
+
 // 训练详情联合类型
-export type TrainingDetails = SchulteDetails | StroopDetails | SequenceDetails | BottleDetails;
+export type TrainingDetails = SchulteDetails | StroopDetails | SequenceDetails | BottleDetails | LogicPuzzleDetails;
 
 // Training record
 export interface TrainingRecord {
