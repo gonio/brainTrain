@@ -15,6 +15,7 @@ import { Stroop } from './pages/games/Stroop';
 import { Sequence } from './pages/games/Sequence';
 import { Bottle } from './pages/games/Bottle';
 import { Syllogism } from './pages/games/Syllogism';
+import { Truth } from './pages/games/Truth';
 import { Quest } from './pages/Quest';
 import { Versus } from './pages/Versus';
 import { VersusRoom } from './pages/VersusRoom';
@@ -59,6 +60,12 @@ const games: {
   {
     mode: 'syllogism',
     title: '说得通吗',
+    description: '演绎推理训练',
+    priority: 'P2',
+  },
+  {
+    mode: 'truth',
+    title: '真假岛',
     description: '演绎推理训练',
     priority: 'P2',
   },
@@ -335,6 +342,7 @@ export const router = createBrowserRouter([
       { path: 'games/sequence', element: <Sequence /> },
       { path: 'games/bottle', element: <Bottle /> },
       { path: 'games/syllogism', element: <Syllogism /> },
+      { path: 'games/truth', element: <Truth /> },
       { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
     ]
   }
