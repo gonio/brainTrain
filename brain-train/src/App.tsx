@@ -17,6 +17,7 @@ import { Bottle } from './pages/games/Bottle';
 import { Syllogism } from './pages/games/Syllogism';
 import { Truth } from './pages/games/Truth';
 import { Lineup } from './pages/games/Lineup';
+import { Zebra } from './pages/games/Zebra';
 import { Quest } from './pages/Quest';
 import { Versus } from './pages/Versus';
 import { VersusRoom } from './pages/VersusRoom';
@@ -73,6 +74,12 @@ const games: {
   {
     mode: 'lineup',
     title: '排排坐',
+    description: '演绎推理训练',
+    priority: 'P2',
+  },
+  {
+    mode: 'zebra',
+    title: '左邻右舍',
     description: '演绎推理训练',
     priority: 'P2',
   },
@@ -351,6 +358,7 @@ export const router = createBrowserRouter([
       { path: 'games/syllogism', element: <Syllogism /> },
       { path: 'games/truth', element: <Truth /> },
       { path: 'games/lineup', element: <Lineup /> },
+      { path: 'games/zebra', element: <Zebra /> },
       { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
     ]
   }
