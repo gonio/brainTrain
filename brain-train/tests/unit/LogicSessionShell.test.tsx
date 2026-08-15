@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { LogicSessionShell } from '@/components/game/LogicSessionShell';
 
 describe('LogicSessionShell', () => {
-  const noop = () => {};
   it('初始渲染开始屏与三档难度', () => {
     render(
       <LogicSessionShell

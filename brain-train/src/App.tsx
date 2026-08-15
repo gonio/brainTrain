@@ -19,6 +19,7 @@ import { Truth } from './pages/games/Truth';
 import { Lineup } from './pages/games/Lineup';
 import { Zebra } from './pages/games/Zebra';
 import { Fallacy } from './pages/games/Fallacy';
+import { Gates } from './pages/games/Gates';
 import { Quest } from './pages/Quest';
 import { Versus } from './pages/Versus';
 import { VersusRoom } from './pages/VersusRoom';
@@ -88,6 +89,12 @@ const games: {
     mode: 'fallacy',
     title: '找谬误',
     description: '谬误批判训练',
+    priority: 'P2',
+  },
+  {
+    mode: 'gates',
+    title: '逻辑门',
+    description: '规则推演训练',
     priority: 'P2',
   },
 ];
@@ -367,6 +374,7 @@ export const router = createBrowserRouter([
       { path: 'games/lineup', element: <Lineup /> },
       { path: 'games/zebra', element: <Zebra /> },
       { path: 'games/fallacy', element: <Fallacy /> },
+      { path: 'games/gates', element: <Gates /> },
       { path: '*', element: <div className="py-8 text-center">页面未找到</div> },
     ]
   }
