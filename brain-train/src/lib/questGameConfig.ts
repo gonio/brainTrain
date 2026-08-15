@@ -1,4 +1,4 @@
-// 主线闯关难度参数表：4 游戏 × 10 级
+// 主线闯关难度参数表：10 游戏 × 10 级
 // 详见 spec: docs/superpowers/specs/2026-06-24-quest-mode-design.md §4
 
 import type {
@@ -7,6 +7,7 @@ import type {
   SequenceDifficultyParams,
   StroopDifficultyParams,
   BottleDifficultyParams,
+  LogicPuzzleDifficultyParams,
   GameId,
 } from '@/types/quest';
 
@@ -73,12 +74,34 @@ export const BOTTLE_DIFFICULTIES: readonly DifficultyLevel<BottleDifficultyParam
   { difficulty: 10, params: { bottleCount: 9, timeLimit: 30 },  goodThreshold: 1.5, excellentThreshold: 1.0 },
 ];
 
+// ── 逻辑谜题（6 游戏 × 10 级） ──
+// 尝试次数制评星在 QuestLogicRunner 内完成，thresholds 仅为类型占位
+const L = (difficulty: number, engineLevel: number): DifficultyLevel<LogicPuzzleDifficultyParams> =>
+  ({ difficulty, params: { engineLevel }, goodThreshold: 2, excellentThreshold: 3 });
+
+// 逻辑门：engineLevel = 门数量，1-20 取 10 个点
+export const GATES_DIFFICULTIES = [L(1, 1), L(2, 2), L(3, 3), L(4, 5), L(5, 7), L(6, 9), L(7, 11), L(8, 13), L(9, 16), L(10, 20)];
+// 真假岛：engineLevel = 岛民数，只有 3-6，低级重复 3 人但陈述类型逐步解锁
+export const TRUTH_DIFFICULTIES = [L(1, 3), L(2, 3), L(3, 4), L(4, 4), L(5, 5), L(6, 5), L(7, 5), L(8, 6), L(9, 6), L(10, 6)];
+// 排排坐 / 说得通吗 / 左邻右舍：1-20 等距取 10 点
+export const LINEUP_DIFFICULTIES = [L(1, 1), L(2, 3), L(3, 5), L(4, 7), L(5, 9), L(6, 11), L(7, 13), L(8, 15), L(9, 17), L(10, 20)];
+export const SYLLOGISM_DIFFICULTIES = LINEUP_DIFFICULTIES;
+export const ZEBRA_DIFFICULTIES = LINEUP_DIFFICULTIES;
+// 找谬误：题库难度 1/2/3
+export const FALLACY_DIFFICULTIES = [L(1, 1), L(2, 1), L(3, 1), L(4, 2), L(5, 2), L(6, 2), L(7, 2), L(8, 3), L(9, 3), L(10, 3)];
+
 /** 按 gameId 取难度表（统一为 unknown 参数类型，调用方自行 as 断言） */
 export const DIFFICULTY_TABLES: Record<GameId, readonly DifficultyLevel<unknown>[]> = {
   schulte: SCHULTE_DIFFICULTIES,
   sequence: SEQUENCE_DIFFICULTIES,
   stroop: STROOP_DIFFICULTIES,
   bottle: BOTTLE_DIFFICULTIES,
+  gates: GATES_DIFFICULTIES,
+  truth: TRUTH_DIFFICULTIES,
+  lineup: LINEUP_DIFFICULTIES,
+  syllogism: SYLLOGISM_DIFFICULTIES,
+  zebra: ZEBRA_DIFFICULTIES,
+  fallacy: FALLACY_DIFFICULTIES,
 };
 
 /** 取某游戏某难度配置（difficulty 1-10） */

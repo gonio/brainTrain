@@ -8,6 +8,7 @@ import type {
   SequenceQuestDetails,
   StroopQuestDetails,
 } from '@/types/quest';
+import { LOGIC_GAME_NAMES } from '@/types';
 
 // 颜色名 → CSS 颜色值映射，用于把错题题面渲染成和游戏里一样的样式
 // （文字内容=字义，文字颜色=显示色），一眼就能看出"这个字是什么颜色"。
@@ -20,6 +21,7 @@ const GAME_NAMES: Record<GameId, string> = {
   sequence: '序列记忆',
   stroop: '字色干扰',
   bottle: '暗瓶排列',
+  ...LOGIC_GAME_NAMES,
 };
 
 interface QuestResultDialogProps {

@@ -180,7 +180,7 @@ function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-headline text-2xl font-extrabold mb-1">主线闯关</h2>
-              <p className="text-primary-foreground/80 text-sm">4 个游戏随机串联，由易到难，40 关挑战</p>
+              <p className="text-primary-foreground/80 text-sm">10 个游戏随机串联，由易到难，100 关挑战</p>
             </div>
             <span className="material-symbols-outlined text-4xl">arrow_forward</span>
           </div>

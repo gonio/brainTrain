@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { pickNextGame, applyResult, isCleared, createInitialProgress } from '@/lib/questEngine';
+import { GAME_IDS } from '@/types/quest';
 import type { QuestProgress, QuestResult } from '@/types/quest';
 
-const p = (s: number, q: number, t: number, b: number): QuestProgress['progress'] =>
-  ({ schulte: s, sequence: q, stroop: t, bottle: b });
+// 6 个逻辑游戏的进度键：默认全 0（未推进），LOGIC_10 表示已全部推满
+type LogicProgress = Pick<QuestProgress['progress'], 'gates' | 'truth' | 'lineup' | 'syllogism' | 'zebra' | 'fallacy'>;
+const LOGIC_0: LogicProgress = { gates: 0, truth: 0, lineup: 0, syllogism: 0, zebra: 0, fallacy: 0 };
+const LOGIC_10: LogicProgress = { gates: 10, truth: 10, lineup: 10, syllogism: 10, zebra: 10, fallacy: 10 };
+
+const p = (s: number, q: number, t: number, b: number, logic: LogicProgress = LOGIC_0): QuestProgress['progress'] =>
+  ({ schulte: s, sequence: q, stroop: t, bottle: b, ...logic });
 
 const result = (overides: Partial<QuestResult>): QuestResult => ({
   gameId: 'schulte',
@@ -16,9 +22,9 @@ const result = (overides: Partial<QuestResult>): QuestResult => ({
 });
 
 describe('pickNextGame', () => {
-  it('全 0 时返回 4 个游戏之一', () => {
+  it('全 0 时返回 10 个游戏之一', () => {
     const r = pickNextGame({ progress: p(0, 0, 0, 0) });
-    expect(['schulte', 'sequence', 'stroop', 'bottle']).toContain(r);
+    expect(GAME_IDS).toContain(r);
   });
 
   it('舒尔特冒进到 5、其余 0 时，舒尔特被锁（nextDiff 6 - minNext 1 = 5，5<3 假）', () => {
@@ -42,7 +48,7 @@ describe('pickNextGame', () => {
   });
 
   it('全满时返回 null', () => {
-    expect(pickNextGame({ progress: p(10, 10, 10, 10) })).toBeNull();
+    expect(pickNextGame({ progress: p(10, 10, 10, 10, LOGIC_10) })).toBeNull();
   });
 
   it('最坏连撞 ≤ 3：舒尔特 progress=3 时被锁（nextDiff 4 - 1 = 3，3<3 假）', () => {
@@ -57,7 +63,7 @@ describe('pickNextGame', () => {
       const r = pickNextGame({ progress: p(2, 0, 0, 0) });
       if (r) seen.add(r);
     }
-    expect(seen.size).toBe(4);
+    expect(seen.size).toBe(10);
   });
 });
 
@@ -92,9 +98,9 @@ describe('applyResult', () => {
     expect(updated.stars['schulte-3']).toBe(2);
   });
 
-  it('4 个全满时 completed=true', () => {
+  it('10 个全满时 completed=true', () => {
     const initial: QuestProgress = {
-      id: 'singleton', progress: p(10, 10, 10, 9), stars: {}, completed: false,
+      id: 'singleton', progress: p(10, 10, 10, 9, LOGIC_10), stars: {}, completed: false,
     };
     const updated = applyResult(initial, result({ gameId: 'bottle', difficulty: 10, stars: 3 }));
     expect(updated.progress.bottle).toBe(10);
@@ -123,7 +129,7 @@ describe('applyResult', () => {
   it('失败（passed:false）不触发 completed', () => {
     // 差一关通关，但这次失败 → 仍 completed=false
     const initial: QuestProgress = {
-      id: 'singleton', progress: p(10, 10, 10, 9), stars: {}, completed: false,
+      id: 'singleton', progress: p(10, 10, 10, 9, LOGIC_10), stars: {}, completed: false,
     };
     const updated = applyResult(initial, result({ gameId: 'bottle', difficulty: 10, passed: false, stars: 0 }));
     expect(updated.progress.bottle).toBe(9);
@@ -148,12 +154,16 @@ describe('applyResult', () => {
 });
 
 describe('isCleared', () => {
-  it('4 个全为 10 时返回 true', () => {
-    expect(isCleared({ progress: p(10, 10, 10, 10) })).toBe(true);
+  it('10 个全为 10 时返回 true', () => {
+    expect(isCleared({ progress: p(10, 10, 10, 10, LOGIC_10) })).toBe(true);
+  });
+
+  it('旧 4 游戏全满但逻辑游戏未满时返回 false', () => {
+    expect(isCleared({ progress: p(10, 10, 10, 10) })).toBe(false);
   });
 
   it('有未满时返回 false', () => {
-    expect(isCleared({ progress: p(10, 10, 10, 9) })).toBe(false);
+    expect(isCleared({ progress: p(10, 10, 10, 9, LOGIC_10) })).toBe(false);
   });
 
   it('全 0 时返回 false', () => {

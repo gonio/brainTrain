@@ -2,7 +2,9 @@
 // 详见 spec: docs/superpowers/specs/2026-06-24-quest-mode-design.md
 
 /** 主线闯关支持的游戏标识 */
-export type GameId = 'schulte' | 'sequence' | 'stroop' | 'bottle';
+export type GameId =
+  | 'schulte' | 'sequence' | 'stroop' | 'bottle'
+  | 'gates' | 'truth' | 'lineup' | 'syllogism' | 'zebra' | 'fallacy';
 
 /** 各游戏支持的难度维度（仅标注非可选参数） */
 export interface SchulteDifficultyParams {
@@ -28,6 +30,11 @@ export interface StroopDifficultyParams {
 export interface BottleDifficultyParams {
   bottleCount: number;
   timeLimit?: number;
+}
+
+/** 逻辑谜题关卡参数：引擎难度（1-20；找谬误为题库难度 1-3） */
+export interface LogicPuzzleDifficultyParams {
+  engineLevel: number;
 }
 
 /** 单级难度配置（含星级阈值） */
@@ -103,5 +110,8 @@ export interface QuestProgress {
   completed: boolean;
 }
 
-/** 4 个游戏的 id 列表（引擎迭代用） */
-export const GAME_IDS: readonly GameId[] = ['schulte', 'sequence', 'stroop', 'bottle'] as const;
+/** 10 个游戏的 id 列表（引擎迭代用） */
+export const GAME_IDS: readonly GameId[] = [
+  'schulte', 'sequence', 'stroop', 'bottle',
+  'gates', 'truth', 'lineup', 'syllogism', 'zebra', 'fallacy',
+] as const;

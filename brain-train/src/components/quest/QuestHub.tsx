@@ -1,12 +1,14 @@
-// 关卡大厅：4 游戏进度总览 + 开始下一关 / 返回
+// 关卡大厅：10 游戏进度总览 + 开始下一关 / 返回
 import type { QuestProgress, GameId } from '@/types/quest';
 import { GAME_IDS } from '@/types/quest';
+import { LOGIC_GAME_NAMES } from '@/types';
 
 const GAME_NAMES: Record<GameId, string> = {
   schulte: '舒尔特表',
   sequence: '序列记忆',
   stroop: '字色干扰',
   bottle: '暗瓶排列',
+  ...LOGIC_GAME_NAMES,
 };
 
 interface QuestHubProps {
@@ -25,7 +27,7 @@ export function QuestHub({ progress, onStart, onBack }: QuestHubProps) {
         <div>
           <h1 className="font-headline text-3xl font-extrabold text-foreground">主线闯关</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            已完成 {totalCleared}/40 关 · 累计 {totalStars} 星
+            已完成 {totalCleared}/{GAME_IDS.length * 10} 关 · 累计 {totalStars} 星
           </p>
         </div>
         <button
@@ -36,7 +38,7 @@ export function QuestHub({ progress, onStart, onBack }: QuestHubProps) {
         </button>
       </div>
 
-      {/* 4 游戏进度 */}
+      {/* 10 游戏进度 */}
       <div className="space-y-4 mb-8">
         {GAME_IDS.map((g) => {
           const cleared = progress.progress[g];

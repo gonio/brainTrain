@@ -8,6 +8,13 @@ import { QuestSchulteRunner } from './QuestSchulteRunner';
 import { QuestSequenceRunner } from './QuestSequenceRunner';
 import { QuestStroopRunner } from './QuestStroopRunner';
 import { QuestBottleRunner } from './QuestBottleRunner';
+import { makeLogicRunner } from './QuestLogicRunner';
+import { GatesGame } from '@/components/game/GatesGame';
+import { TruthGame } from '@/components/game/TruthGame';
+import { LineupGame } from '@/components/game/LineupGame';
+import { SyllogismGame } from '@/components/game/SyllogismGame';
+import { ZebraGame } from '@/components/game/ZebraGame';
+import { FallacyGame } from '@/components/game/FallacyGame';
 import { useStartCountdown } from '@/hooks/useStartCountdown';
 
 export interface RunnerProps {
@@ -20,6 +27,12 @@ const RUNNERS: Record<GameId, React.ComponentType<RunnerProps>> = {
   sequence: QuestSequenceRunner,
   stroop: QuestStroopRunner,
   bottle: QuestBottleRunner,
+  gates: makeLogicRunner('gates', GatesGame),
+  truth: makeLogicRunner('truth', TruthGame),
+  lineup: makeLogicRunner('lineup', LineupGame),
+  syllogism: makeLogicRunner('syllogism', SyllogismGame),
+  zebra: makeLogicRunner('zebra', ZebraGame),
+  fallacy: makeLogicRunner('fallacy', FallacyGame),
 };
 
 export function QuestRunner({

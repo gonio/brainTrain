@@ -10,7 +10,7 @@ import {
 import { GAME_IDS } from '@/types/quest';
 
 describe('questGameConfig 难度表完整性', () => {
-  it('4 张表各 10 级', () => {
+  it('10 张表各 10 级', () => {
     GAME_IDS.forEach((g) => {
       expect(DIFFICULTY_TABLES[g]).toHaveLength(10);
     });

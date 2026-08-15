@@ -1,11 +1,13 @@
 // 主线闯关进行中顶部条：游戏名 + 难度 + 退出
 import type { GameId } from '@/types/quest';
+import { LOGIC_GAME_NAMES } from '@/types';
 
 const GAME_NAMES: Record<GameId, string> = {
   schulte: '舒尔特表',
   sequence: '序列记忆',
   stroop: '字色干扰',
   bottle: '暗瓶排列',
+  ...LOGIC_GAME_NAMES,
 };
 
 interface QuestHUDProps {

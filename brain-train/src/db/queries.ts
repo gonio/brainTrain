@@ -204,7 +204,7 @@ export async function saveQuestProgress(progress: SchulteQuestProgress): Promise
 export function createInitialQuestProgress(): QuestProgress {
   return {
     id: 'singleton',
-    progress: { schulte: 0, sequence: 0, stroop: 0, bottle: 0 },
+    progress: { schulte: 0, sequence: 0, stroop: 0, bottle: 0, gates: 0, truth: 0, lineup: 0, syllogism: 0, zebra: 0, fallacy: 0 },
     stars: {},
     completed: false,
   };

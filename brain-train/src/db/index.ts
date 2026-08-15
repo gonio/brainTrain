@@ -55,6 +55,23 @@ export class BrainTrainDB extends Dexie {
       questProgress: 'id',
       versusAuth: 'id',
     });
+
+    // v6: 主线闯关新增 6 个逻辑游戏，老存档 progress 补零键
+    this.version(6).stores({
+      userProfile: 'id',
+      trainingRecords: 'id, mode, startedAt, [mode+startedAt]',
+      dailyGoals: 'date',
+      schulteQuestProgress: 'id',
+      questProgress: 'id',
+      versusAuth: 'id',
+    }).upgrade(async (tx) => {
+      const rec = await tx.table('questProgress').get('singleton');
+      if (!rec) return;
+      for (const g of ['gates', 'truth', 'lineup', 'syllogism', 'zebra', 'fallacy']) {
+        if (rec.progress[g] === undefined) rec.progress[g] = 0;
+      }
+      await tx.table('questProgress').put(rec);
+    });
   }
 }
 

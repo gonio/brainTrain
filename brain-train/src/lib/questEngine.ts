@@ -5,11 +5,11 @@ import type { QuestProgress, QuestResult } from '@/types/quest';
 import { GAME_IDS } from '@/types/quest';
 import type { GameId } from '@/types/quest';
 
-/** 初始进度：4 游戏全 0 */
+/** 初始进度：10 游戏全 0 */
 export function createInitialProgress(): QuestProgress {
   return {
     id: 'singleton',
-    progress: { schulte: 0, sequence: 0, stroop: 0, bottle: 0 },
+    progress: { schulte: 0, sequence: 0, stroop: 0, bottle: 0, gates: 0, truth: 0, lineup: 0, syllogism: 0, zebra: 0, fallacy: 0 },
     stars: {},
     completed: false,
   };
@@ -47,7 +47,7 @@ export function pickNextGame(progress: Pick<QuestProgress, 'progress'>): GameId 
  *   - 过关（passed=true）：
  *     - progress[g] = max(progress[g], difficulty)（防回退）
  *     - stars[key] = max(stars[key], newStars)（只留最好），key = `${gameId}-${difficulty}`
- *     - 4 个 progress 全 10 → completed = true
+ *     - 10 个 progress 全 10 → completed = true
  */
 export function applyResult(progress: QuestProgress, r: QuestResult): QuestProgress {
   // 失败：不推进、不记星。返回字段相同的新对象（保持不可变），
@@ -70,7 +70,7 @@ export function applyResult(progress: QuestProgress, r: QuestResult): QuestProgr
   };
 }
 
-/** 4 个游戏是否全满（通关） */
+/** 10 个游戏是否全满（通关） */
 export function isCleared(progress: Pick<QuestProgress, 'progress'>): boolean {
   return GAME_IDS.every((g) => progress.progress[g] >= 10);
 }
