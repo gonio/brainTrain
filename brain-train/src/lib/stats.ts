@@ -13,7 +13,11 @@ export function calculateOverallStats(records: TrainingRecord[]) {
 }
 
 export function calculateModeStats(records: TrainingRecord[]): Record<TrainingMode, ModeStatistics> {
-  const modes: TrainingMode[] = ['schulte', 'stroop', 'sequence'];
+  // 覆盖全部 10 个训练模式（此前只枚举 3 个，新增模式的「各模式统计」永远不展示）
+  const modes: TrainingMode[] = [
+    'schulte', 'stroop', 'sequence', 'bottle',
+    'gates', 'truth', 'lineup', 'syllogism', 'zebra', 'fallacy',
+  ];
   const result = {} as Record<TrainingMode, ModeStatistics>;
 
   for (const mode of modes) {
